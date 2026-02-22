@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Afrimine.Api/Afrimine.Api.csproj" Id="1cdfbfa2-7f04-475a-bd8a-ba612c2db346" />
+    <Project Path="src/Afrimine.Application/Afrimine.Application.csproj" Id="1392e863-3787-410c-9825-d45fdad3e19f" />
+  </Folder>
+</Solution>
