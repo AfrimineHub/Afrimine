@@ -45,3 +45,7 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ github.sha }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+
+      - name: Automatic Deploy to Render
+        run: |
+          curl -X ${{ secrets.RENDER_DEPLOY_HOOK }}
