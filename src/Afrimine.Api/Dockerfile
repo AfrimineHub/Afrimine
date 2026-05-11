@@ -13,7 +13,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/Afrimine.Api/Afrimine.Api.csproj", "Afrimine.Api/"]
-COPY ["src/Afrimine.Application/Afrimine.Application.csproj", "Afrimine.Application/"]
+COPY ["src/Afrimine.Migrations/Afrimine.Migrations.csproj", "Afrimine.Migrations/"]
+COPY ["src/Afrimine.Model/Afrimine.Model.csproj", "Afrimine.Model/"]
+COPY ["src/Afrimine.Repository/Afrimine.Repository.csproj", "Afrimine.Repository/"]
+COPY ["src/Afrimine.Services/Afrimine.Services.csproj", "Afrimine.Services/"]
+COPY ["src/Afrimine.Shared/Afrimine.Shared.csproj", "Afrimine.Shared/"]
+
 RUN dotnet restore "Afrimine.Api/Afrimine.Api.csproj"
 COPY src/ .
 WORKDIR "/src/Afrimine.Api"

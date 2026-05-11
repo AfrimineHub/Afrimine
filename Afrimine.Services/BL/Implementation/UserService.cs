@@ -1,0 +1,282 @@
+﻿using Afrimine.Model.Entities;
+using Afrimine.Model.Enums;
+using Afrimine.Model.ViewModels;
+using Afrimine.Repository;
+using Afrimine.Services.BL.Interfaces;
+using Afrimine.Services.DTOs;
+using Afrimine.Services.Responses;
+using Afrimine.Services.Validators;
+using Afrimine.Shared.Configs;
+using Afrimine.Shared.ExternalServices;
+using Afrimine.Shared.Helpers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Role = Afrimine.Model.Enums.Role;
+
+namespace Afrimine.Services.BL.Implementation
+{
+    public class UserService : IUserService
+    {
+        private readonly UserManager<User> _userManager;
+        private readonly SignInManager<User> _signInManager;
+        private readonly AppConfig _settings;
+        private readonly IRepositoryManager _repositoryManager;
+
+        public UserService(UserManager<User> userManager,
+                        SignInManager<User> signInManager, IOptions<AppConfig> options, IRepositoryManager repositoryManager)
+        {
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _settings = options.Value;
+            _repositoryManager = repositoryManager;
+        }
+
+        public async Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request)
+        {
+            var validationResult = await ValidateUser(request);
+            if (!validationResult.Success)
+            {
+                return ApiResponse<LoginResponseDto>.Fail(validationResult.Message, validationResult.StatusCode);
+            }
+
+            var (user, roles) = validationResult.Data;
+            var accessToken = CreateAccessToken(user.Id, user.Email!, roles);
+            user.LastLogin = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(accessToken));
+        }
+
+        public async Task<ApiResponse<string>> RegisterUserAsync(RegisterRequestDto request)
+        {
+            var validate = new RegistrationRequestValidator().Validate(request);
+            if (!validate.IsValid)
+            {
+                return ApiResponse<string>.Fail(validate.Errors.FirstOrDefault()?.ErrorMessage ?? ResponseMessages.InvalidRequest,400);
+            }
+
+            if (request.Role == Role.SuperAdmin || request.Role == Role.Support)
+            {
+                return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Role),403);
+            }
+
+            var existing = await _userManager.Users.AnyAsync(u => u.Email == request.Email || u.PhoneNumber == request.Phone);
+
+            if (existing)
+            {
+                return ApiResponse<string>.Fail(ResponseMessages.ExistingUser, 409);
+            }
+
+            var user = request.Initialize();
+            var createResult = await _userManager.CreateAsync(user, request.Password);
+
+            if (!createResult.Succeeded)
+            {
+                return ApiResponse<string>.Fail(createResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed,400);
+            }
+
+            var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToString());
+            if (!roleResult.Succeeded)
+            {
+                await _userManager.DeleteAsync(user);
+
+                return ApiResponse<string>.Fail(roleResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed,400);
+            }
+
+            var otp = TokenHelpers.GenerateOtp();
+            var hash = TokenHelpers.HashToken(otp, _settings.JwtKey);
+            var tokenEntry = ObjectsInitializer.InitializeOtpEntry(user.Id, hash, EToken.ConfirmEmail);
+
+            await _repositoryManager.Otp.CreateToken(tokenEntry);
+            await _repositoryManager.SaveAsync();
+
+            var html = GetEmailTemplate.GetConfirmEmailTemplate(otp);
+
+            Notifications.SendEmail(user.Email!, "Confirm Email Address", html, html);
+            
+            return ApiResponse<string>.Ok(user.Email!, 200, "OTP sent successfully");
+        }
+
+        #region Private Methods
+        async Task<ApiResponse<(User user, string[] roles)>> ValidateUser(LoginRequestDto dto)
+        {
+            if(string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.InvalidEmailOrPassword, 400);
+            }
+
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+            if (user == null)
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.UserRecordNotFound, 404);
+            }
+
+            if (!user.EmailConfirmed || user.Status != AccountStatus.Active)
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.EmailNotConfirmedOrInactive, 403);
+            }
+
+            var check = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
+            if (!check.Succeeded)
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.WrongPassword, 403);
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles == null || roles.Count == 0)
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.NoAssignedRole, 403);
+            }
+
+            return ApiResponse<(User user, string[] roles)>.Ok((user, roles.ToArray()));
+        }
+
+        string CreateAccessToken(string userid, string email, string[] roles)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, userid),
+                new Claim(ClaimTypes.Name, email),
+            };
+
+            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+            var key = Encoding.UTF8.GetBytes(_settings.JwtKey);
+            var secret = new SymmetricSecurityKey(key);
+            var credentials = new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
+
+            var now = DateTime.UtcNow;
+            var jwtToken = new JwtSecurityToken(
+                    issuer: _settings.JwtIssuer,
+                    audience: _settings.JwtAudience,
+                    claims: claims,
+                    notBefore: now,
+                    expires:   now.AddMinutes(_settings.JwtExpirationMinutes),
+                    signingCredentials: credentials
+                );
+
+            return new JwtSecurityTokenHandler().WriteToken(jwtToken);
+        }
+
+        public async Task<ApiResponse<string>> ConfirmEmail(OtpForCreationDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return ApiResponse<string>.Fail(string.Format(ResponseMessages.UserRecordNotFound, model.Email),404);
+            }
+
+            var hash = TokenHelpers.HashToken(model.Otp, _settings.JwtKey);
+
+            var otp = await _repositoryManager.Otp.GetOtp(user.Id, model.Type, hash);
+
+            var otpResult = ValidateOtp(otp);
+
+            if (!otpResult.Success)
+            {
+                return otpResult;
+            }
+
+            user.EmailConfirmed = true;
+            user.Status = AccountStatus.Active;
+            
+            if(otp != null)
+            {
+                _repositoryManager.Otp.DeleteToken(otp);
+            }
+
+            await _userManager.UpdateAsync(user);
+            await _repositoryManager.SaveAsync();
+
+            return ApiResponse<string>.Ok(user.Email!, 200, "Email confirmed successfully");
+        }
+
+        public async Task<ApiResponse<string>> ResetPassword(PasswordResetDto passwordResetDto)
+        {
+            var user = await _userManager.FindByEmailAsync(passwordResetDto.Email);
+
+            if (user == null)
+            {
+                return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
+            }
+
+            var otp = TokenHelpers.GenerateOtp();
+            var hash = TokenHelpers.HashToken(otp, _settings.JwtKey);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var tokenHash = TokenHelpers.Encrypt(token, _settings.JwtKey);
+            var tokenEntry = ObjectsInitializer.InitializeOtpEntry(user.Id, hash, EToken.ResetPassword, tokenHash: tokenHash);
+
+            await _repositoryManager.Otp.CreateToken(tokenEntry);
+            await _repositoryManager.SaveAsync();
+
+            var html = GetEmailTemplate.GetResetPasswordEmailTemplate(otp);
+
+            Notifications.SendEmail(user.Email!, "Reset Password", html, html);
+
+            return ApiResponse<string>.Ok(user.Email!, 200, "OTP sent successfully");
+        }
+
+        public async Task<ApiResponse<string>> ChangeForgottenPassword(ChangeForgotPasswordRequestModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null)
+            {
+                return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
+            }
+
+            var otpHash = TokenHelpers.HashToken(model.Otp, _settings.JwtKey);
+            var otp = await _repositoryManager.Otp.GetOtp(user.Id, EToken.ResetPassword, otpHash);
+
+            if (otp == null)
+            {
+                return ApiResponse<string>.Fail(ResponseMessages.InvalidOtp, StatusCodes.Status400BadRequest);
+            }
+
+            if (otp.ExpiresAt < DateTime.UtcNow)
+            {
+                return ApiResponse<string>.Fail("Reset token is expired", StatusCodes.Status400BadRequest);
+            }
+
+            if (string.IsNullOrWhiteSpace(otp.TokenHash))
+            {
+                return ApiResponse<string>.Fail("Reset token is invalid", StatusCodes.Status400BadRequest);
+            }
+
+            var token = TokenHelpers.Decrypt(otp.TokenHash, _settings.JwtKey);
+            var changePassword = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+            if (!changePassword.Succeeded)
+            {
+                return ApiResponse<string>.Fail(changePassword.Errors.FirstOrDefault()?.Description ?? ResponseMessages.PasswordResetFailed,StatusCodes.Status400BadRequest);
+            }
+
+            _repositoryManager.Otp.DeleteToken(otp);
+            await _repositoryManager.SaveAsync();
+
+            return ApiResponse<string>.Ok(user.Email!, StatusCodes.Status200OK, "Password reset successful");
+        }
+
+        private ApiResponse<string> ValidateOtp(OtpEntry? otp)
+        {
+            if (otp == null)
+            {
+                return ApiResponse<string>.Fail(ResponseMessages.OtpNotFound, StatusCodes.Status404NotFound);
+            }
+
+            if (otp.ExpiresAt < DateTime.Now)
+            {
+                return ApiResponse<string>.Fail(ResponseMessages.OtpExpired, StatusCodes.Status404NotFound);
+            }
+
+            return ApiResponse<string>.Ok("OTP validated successfully");
+        }
+        #endregion
+    }
+}
