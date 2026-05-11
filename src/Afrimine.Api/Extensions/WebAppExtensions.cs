@@ -10,7 +10,9 @@ namespace Afrimine.Api.Extensions
             app.UseSwaggerDocsUI();
             app.UseForwardedHeaders(new ForwardedHeadersOptions
             {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+                KnownNetworks = { },
+                KnownProxies = { }
             });
 
             app.UseHttpsRedirection();

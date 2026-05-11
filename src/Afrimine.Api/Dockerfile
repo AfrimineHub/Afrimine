@@ -10,15 +10,6 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 
-# Use /repo as root to mirror the actual repository layout:
-#   /repo/src/Afrimine.Api
-#   /repo/src/Afrimine.Shared
-#   /repo/Afrimine.Migrations
-#   /repo/Afrimine.Model
-#   /repo/Afrimine.Repository
-#   /repo/Afrimine.Services
-# This keeps all ../../ and ..\ relative paths in .csproj files intact.
-
 WORKDIR /repo
 
 # Copy .csproj files first for layer-cached restore

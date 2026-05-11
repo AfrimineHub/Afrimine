@@ -20,7 +20,7 @@ namespace Afrimine.Api.Controllers.V1
         }
 
         /// <summary>
-        /// Registers a user
+        /// Register user
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
@@ -47,7 +47,7 @@ namespace Afrimine.Api.Controllers.V1
 
 
         /// <summary>
-        /// Logs in a user
+        /// Confirm Email
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
@@ -60,7 +60,7 @@ namespace Afrimine.Api.Controllers.V1
         }
 
         /// <summary>
-        /// Logs in a user
+        /// Reset password
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
@@ -73,7 +73,7 @@ namespace Afrimine.Api.Controllers.V1
         }
 
         /// <summary>
-        /// Logs in a user
+        /// Forget password
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>

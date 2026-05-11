@@ -1,4 +1,6 @@
-﻿namespace Afrimine.Model.Enums
+﻿using System.ComponentModel;
+
+namespace Afrimine.Model.Enums
 {
     public enum Role
     {
@@ -10,9 +12,13 @@
 
     public enum AccountStatus
     {
-        Pending, 
+        [Description("Pending")]
+        Pending,
+        [Description("Active")]
         Active,
+        [Description("Suspended")]
         Suspended,
+        [Description("Deactivated")]
         Deactivated
     }
 }

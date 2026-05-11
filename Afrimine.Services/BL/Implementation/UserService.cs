@@ -53,6 +53,28 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(accessToken));
         }
 
+        public async Task<ApiResponse<CurrentUserDto>> GetCurrentUser(string? userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return ApiResponse<CurrentUserDto>.Fail(ResponseMessages.NotAuthenticated, StatusCodes.Status401Unauthorized);
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if(user == null)
+            {
+                return ApiResponse<CurrentUserDto>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
+            }
+
+            return ApiResponse<CurrentUserDto>.Ok(new CurrentUserDto
+            {
+                Name = user.FullName,
+                Email = user.Email!,
+                PhoneNumber = user.PhoneNumber!,
+                Status = user.Status
+            });
+        }
+
         public async Task<ApiResponse<string>> RegisterUserAsync(RegisterRequestDto request)
         {
             var validate = new RegistrationRequestValidator().Validate(request);
