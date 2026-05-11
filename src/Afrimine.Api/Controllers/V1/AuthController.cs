@@ -3,8 +3,6 @@ using Afrimine.Services.BL.Interfaces;
 using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
 using Asp.Versioning;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Afrimine.Api.Controllers.V1
