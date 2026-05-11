@@ -1,6 +1,10 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="Afrimine.Migrations/Afrimine.Migrations.csproj" Id="220a0851-7302-4583-8ab1-f80e18194bf1" />
+    <Project Path="Afrimine.Model/Afrimine.Model.csproj" Id="07bb3678-63fb-4e21-994d-2104b697f926" />
+    <Project Path="Afrimine.Repository/Afrimine.Repository.csproj" Id="652115b9-0e6e-47c5-b94a-0b762d5cb6aa" />
+    <Project Path="Afrimine.Services/Afrimine.Services.csproj" Id="7ff500f1-0ddd-4184-8e3b-3df7aaaef3b8" />
     <Project Path="src/Afrimine.Api/Afrimine.Api.csproj" Id="1cdfbfa2-7f04-475a-bd8a-ba612c2db346" />
-    <Project Path="src/Afrimine.Application/Afrimine.Application.csproj" Id="1392e863-3787-410c-9825-d45fdad3e19f" />
+    <Project Path="src/Afrimine.Shared/Afrimine.Shared.csproj" Id="6b6c9998-daa4-4026-bf48-709de8043a51" />
   </Folder>
 </Solution>
