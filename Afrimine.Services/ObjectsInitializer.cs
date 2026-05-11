@@ -1,7 +1,7 @@
 ﻿using Afrimine.Model.Entities;
 using Afrimine.Model.Enums;
 using Afrimine.Services.DTOs;
-using Afrimine.Shared;
+using Afrimine.Shared.Extensions;
 
 namespace Afrimine.Services
 {

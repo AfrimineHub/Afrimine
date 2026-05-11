@@ -1,4 +1,4 @@
-﻿namespace Afrimine.Shared
+﻿namespace Afrimine.Shared.Extensions
 {
     public static class StringExtensions
     {
