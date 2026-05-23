@@ -3,7 +3,9 @@ using Afrimine.Services.BL.Interfaces;
 using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Afrimine.Api.Controllers.V1
 {
@@ -82,6 +84,29 @@ namespace Afrimine.Api.Controllers.V1
         public async Task<IActionResult> ForgetPassword([FromBody] ChangeForgotPasswordRequestModel request)
         {
             var response = await _service.User.ChangeForgottenPassword(request);
+            return StatusCode(response.StatusCode, response);
+        }
+        /// <summary>
+        /// Refresh token
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("refresh-token")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request)
+        {
+            var response = await _service.User.RefreshTokenAsync(request);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Revoke refresh token (logout)</summary>
+        [HttpPost("revoke")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> Revoke()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var response = await _service.User.RevokeTokenAsync(userId!);
             return StatusCode(response.StatusCode, response);
         }
     }
