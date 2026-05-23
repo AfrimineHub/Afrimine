@@ -1,12 +1,9 @@
-﻿using Afrimine.Model.ViewModels;
-using Afrimine.Services.BL.Interfaces;
+﻿using Afrimine.Services.BL.Interfaces;
 using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
 using Afrimine.Shared.Extensions;
 using Asp.Versioning;
-using Hangfire.PostgreSql.Properties;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Afrimine.Api.Controllers.V1
@@ -24,7 +21,7 @@ namespace Afrimine.Api.Controllers.V1
         }
 
         /// <summary>
-        /// Get Login user
+        /// Get current logged in user
         /// </summary>
         /// <returns></returns>
         [HttpGet("current")]

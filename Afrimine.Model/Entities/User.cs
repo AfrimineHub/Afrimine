@@ -9,6 +9,8 @@ namespace Afrimine.Model.Entities
         public AccountStatus Status { get; set; }
         public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
         public DateTime? LastLogin { get; set; }
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiry { get; set; }
     }
 }
                                                       

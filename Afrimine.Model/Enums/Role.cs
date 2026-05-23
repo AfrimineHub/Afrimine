@@ -6,6 +6,7 @@ namespace Afrimine.Model.Enums
     {
         Vendor = 1,
         Buyer,
+        Investor,
         Support,
         SuperAdmin
     }

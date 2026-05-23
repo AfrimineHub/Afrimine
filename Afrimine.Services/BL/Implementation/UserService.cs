@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Role = Afrimine.Model.Enums.Role;
 
@@ -47,10 +48,14 @@ namespace Afrimine.Services.BL.Implementation
 
             var (user, roles) = validationResult.Data;
             var accessToken = CreateAccessToken(user.Id, user.Email!, roles);
+            var refreshToken = GenerateRefreshToken();
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
             user.LastLogin = DateTime.UtcNow;
+
             await _userManager.UpdateAsync(user);
 
-            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(accessToken));
+            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(accessToken, refreshToken));
         }
 
         public async Task<ApiResponse<CurrentUserDto>> GetCurrentUser(string? userId)
@@ -123,6 +128,47 @@ namespace Afrimine.Services.BL.Implementation
             Notifications.SendEmail(user.Email!, "Confirm Email Address", html, html);
             
             return ApiResponse<string>.Ok(user.Email!, 200, "OTP sent successfully");
+        }
+
+        public async Task<ApiResponse<LoginResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto request)
+        {
+            var principal = GetPrincipalFromExpiredToken(request.AccessToken);
+            if (principal == null)
+                return ApiResponse<LoginResponseDto>.Fail("Invalid access token.", StatusCodes.Status401Unauthorized);
+
+            var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId!);
+
+            if (user == null
+                || user.RefreshToken != request.RefreshToken
+                || user.RefreshTokenExpiry <= DateTime.UtcNow)
+            {
+                return ApiResponse<LoginResponseDto>.Fail("Invalid or expired refresh token.", StatusCodes.Status401Unauthorized);
+            }
+
+            var roles = (await _userManager.GetRolesAsync(user)).ToArray();
+            var newAccessToken = CreateAccessToken(user.Id, user.Email!, roles);
+            var newRefreshToken = GenerateRefreshToken();
+
+            // Rotate refresh token
+            user.RefreshToken = newRefreshToken;
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+            await _userManager.UpdateAsync(user);
+
+            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(newAccessToken, newRefreshToken));
+        }
+
+        public async Task<ApiResponse<string>> RevokeTokenAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
+
+            user.RefreshToken = null;
+            user.RefreshTokenExpiry = null;
+            await _userManager.UpdateAsync(user);
+
+            return ApiResponse<string>.Ok("Token revoked successfully.");
         }
 
         #region Private Methods
@@ -298,6 +344,39 @@ namespace Afrimine.Services.BL.Implementation
             }
 
             return ApiResponse<string>.Ok("OTP validated successfully");
+        }
+
+        string GenerateRefreshToken()
+        {
+            var randomBytes = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomBytes);
+            return Convert.ToBase64String(randomBytes);
+        }
+
+        ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
+        {
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = false, // allow expired tokens
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _settings.JwtIssuer,
+                ValidAudience = _settings.JwtAudience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.JwtKey))
+            };
+
+            var handler = new JwtSecurityTokenHandler();
+            var principal = handler.ValidateToken(token, tokenValidationParameters, out var securityToken);
+
+            if (securityToken is not JwtSecurityToken jwtSecurityToken ||
+                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return principal;
         }
         #endregion
     }
