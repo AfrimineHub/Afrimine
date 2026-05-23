@@ -79,7 +79,7 @@ namespace Afrimine.Api.Controllers.V1
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        [HttpPost("forget-password")]
+        [HttpPost("forgot-password")]
         [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
         public async Task<IActionResult> ForgetPassword([FromBody] ChangeForgotPasswordRequestModel request)
         {
@@ -109,5 +109,15 @@ namespace Afrimine.Api.Controllers.V1
             var response = await _service.User.RevokeTokenAsync(userId!);
             return StatusCode(response.StatusCode, response);
         }
+
+        /// <summary>Resend OTP to email</summary>
+        [HttpPost("resend-otp")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequestDto request)
+        {
+            var response = await _service.User.ResendOtpAsync(request);
+            return StatusCode(response.StatusCode, response);
+        }
+
     }
 }

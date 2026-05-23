@@ -21,4 +21,5 @@ namespace Afrimine.Services.DTOs
         public string Otp { get; set; }
         public string Email { get; set; } = default!;
     }
-}
+    public record ResendOtpRequestDto(string Email);
+    }

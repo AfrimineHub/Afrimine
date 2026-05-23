@@ -331,6 +331,35 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok(user.Email!, StatusCodes.Status200OK, "Password reset successful");
         }
 
+        public async Task<ApiResponse<string>> ResendOtpAsync(ResendOtpRequestDto request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+                return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
+
+            if (user.EmailConfirmed)
+                return ApiResponse<string>.Fail("Email is already confirmed.", StatusCodes.Status400BadRequest);
+
+            var existingToken = await _repositoryManager.Otp.GetOtpByUser(user.Id, EToken.ConfirmEmail);
+            if (existingToken != null)
+            {
+                _repositoryManager.Otp.DeleteToken(existingToken);
+                await _repositoryManager.SaveAsync();
+            }
+
+            var otp = TokenHelpers.GenerateOtp();
+            var hash = TokenHelpers.HashToken(otp, _settings.JwtKey);
+            var tokenEntry = ObjectsInitializer.InitializeOtpEntry(user.Id, hash, EToken.ConfirmEmail);
+
+            await _repositoryManager.Otp.CreateToken(tokenEntry);
+            await _repositoryManager.SaveAsync();
+
+            var html = GetEmailTemplate.GetConfirmEmailTemplate(otp);
+            Notifications.SendEmail(user.Email!, "Confirm Email Address", html, html);
+
+            return ApiResponse<string>.Ok(user.Email!, 200, "OTP resent successfully.");
+        }
+
         private ApiResponse<string> ValidateOtp(OtpEntry? otp)
         {
             if (otp == null)
