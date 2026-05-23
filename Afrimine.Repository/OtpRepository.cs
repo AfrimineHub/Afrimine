@@ -19,5 +19,10 @@ namespace Afrimine.Repository
 
         public void UpdateToken (OtpEntry otp) => Update(otp);
         public void DeleteToken(OtpEntry otp) => Delete(otp);
+
+        public async Task<OtpEntry?> GetOtpByUser(string userId, EToken type) =>
+            await FindByCondition(a => a.UserId.Equals(userId) && a.Type == type, true)
+            .OrderByDescending(a => a.CreatedAt)
+            .FirstOrDefaultAsync();
     }
 }
