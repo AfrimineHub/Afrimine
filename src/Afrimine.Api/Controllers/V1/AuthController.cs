@@ -12,6 +12,7 @@ namespace Afrimine.Api.Controllers.V1
     [Route("api/v{version:apiversion}/auth")]
     [ApiVersion("1.0")]
     [ApiController]
+    [Authorize(Roles = Roles.AllUsers)]
     public class AuthController : ControllerBase
     {
         private readonly IServiceManager _service;
@@ -26,6 +27,7 @@ namespace Afrimine.Api.Controllers.V1
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
+        [AllowAnonymous]
         [HttpPost("register")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
@@ -39,11 +41,18 @@ namespace Afrimine.Api.Controllers.V1
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
+        [AllowAnonymous]
         [HttpPost("login")]
         [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
             var response = await _service.User.LoginAsync(request);
+
+            if (!response.Success)
+                return StatusCode(response.StatusCode, response);
+
+            SetRefreshTokenCookie(response.RefreshToken!);
+
             return StatusCode(response.StatusCode, response);
         }
 
@@ -53,6 +62,7 @@ namespace Afrimine.Api.Controllers.V1
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
+        [AllowAnonymous]
         [HttpPost("confirm-email")]
         [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
         public async Task<IActionResult> ConfirmEmail([FromBody] OtpForCreationDto request)
@@ -95,7 +105,14 @@ namespace Afrimine.Api.Controllers.V1
         [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request)
         {
-            var response = await _service.User.RefreshTokenAsync(request);
+            var refreshToken = Request.Cookies["refreshToken"];
+
+            var response = await _service.User.RefreshTokenAsync(refreshToken, request);
+            if (!response.Success)
+                return StatusCode(response.StatusCode, response);
+
+            SetRefreshTokenCookie(response.RefreshToken!);
+
             return StatusCode(response.StatusCode, response);
         }
 
@@ -107,10 +124,14 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var response = await _service.User.RevokeTokenAsync(userId!);
+            // Clear the cookie on logout
+            Response.Cookies.Delete("refreshToken");
+
             return StatusCode(response.StatusCode, response);
         }
 
         /// <summary>Resend OTP to email</summary>
+        [AllowAnonymous]
         [HttpPost("resend-otp")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequestDto request)
@@ -119,5 +140,17 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
+        private void SetRefreshTokenCookie(string refreshToken)
+        {
+            var isProduction = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production";
+
+            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+            {
+                HttpOnly = true,                                                    // JS cannot access
+                Secure = isProduction,                                              // HTTPS only in production
+                SameSite = isProduction ? SameSiteMode.None : SameSiteMode.Lax,   // cross-origin in production
+                Expires = DateTime.UtcNow.AddDays(7)
+            });
+        }
     }
 }

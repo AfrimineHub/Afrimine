@@ -16,6 +16,7 @@ namespace Afrimine.Api.Extensions
             });
 
             app.UseHttpsRedirection();
+            app.UseCors("Frontend");
 
             app.UseAuthentication();
             app.UseAuthorization();

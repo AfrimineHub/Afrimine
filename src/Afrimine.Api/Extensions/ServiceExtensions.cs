@@ -36,6 +36,18 @@ namespace Afrimine.Api.Extensions
                 .ConfigureHangfire(configuration)
                 .AddScoped<INotificationService, NotificationService>()
                 .AddScoped<IRepositoryManager, RepositoryManager>();
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy("Frontend", policy =>
+                {
+                    policy
+                        .WithOrigins("https://afrimine-client-latest.onrender.com") // your frontend URL
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
+            });
         }
 
         private static IServiceCollection ConfigureServiceAndRepo(this IServiceCollection services)

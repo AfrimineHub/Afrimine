@@ -55,7 +55,7 @@ namespace Afrimine.Services.BL.Implementation
 
             await _userManager.UpdateAsync(user);
 
-            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(accessToken, refreshToken));
+            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(accessToken), refreshToken);
         }
 
         public async Task<ApiResponse<CurrentUserDto>> GetCurrentUser(string? userId)
@@ -66,7 +66,7 @@ namespace Afrimine.Services.BL.Implementation
             }
 
             var user = await _userManager.FindByIdAsync(userId);
-            if(user == null)
+            if (user == null)
             {
                 return ApiResponse<CurrentUserDto>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
             }
@@ -85,12 +85,24 @@ namespace Afrimine.Services.BL.Implementation
             var validate = new RegistrationRequestValidator().Validate(request);
             if (!validate.IsValid)
             {
-                return ApiResponse<string>.Fail(validate.Errors.FirstOrDefault()?.ErrorMessage ?? ResponseMessages.InvalidRequest,400);
+                return ApiResponse<string>.Fail(validate.Errors.FirstOrDefault()?.ErrorMessage ?? ResponseMessages.InvalidRequest, 400);
             }
 
-            if (request.Role == Role.SuperAdmin || request.Role == Role.Support)
+            // Only these roles can self-register
+            var allowedRoles = new[]
             {
-                return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Role),403);
+                Role.Buyer,
+                Role.Vendor,
+                Role.Support,
+                Role.Investor
+            };
+
+            if (!allowedRoles.Contains(request.Type))
+                return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Type), 403);
+
+            if (request.Type == Role.SuperAdmin || request.Type == Role.Support)
+            {
+                return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Type), 403);
             }
 
             var existing = await _userManager.Users.AnyAsync(u => u.Email == request.Email || u.PhoneNumber == request.Phone);
@@ -105,15 +117,15 @@ namespace Afrimine.Services.BL.Implementation
 
             if (!createResult.Succeeded)
             {
-                return ApiResponse<string>.Fail(createResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed,400);
+                return ApiResponse<string>.Fail(createResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed, 400);
             }
 
-            var roleResult = await _userManager.AddToRoleAsync(user, request.Role.ToString());
+            var roleResult = await _userManager.AddToRoleAsync(user, request.Type.ToString());
             if (!roleResult.Succeeded)
             {
                 await _userManager.DeleteAsync(user);
 
-                return ApiResponse<string>.Fail(roleResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed,400);
+                return ApiResponse<string>.Fail(roleResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed, 400);
             }
 
             var otp = TokenHelpers.GenerateOtp();
@@ -126,12 +138,15 @@ namespace Afrimine.Services.BL.Implementation
             var html = GetEmailTemplate.GetConfirmEmailTemplate(otp);
 
             Notifications.SendEmail(user.Email!, "Confirm Email Address", html, html);
-            
+
             return ApiResponse<string>.Ok(user.Email!, 200, "OTP sent successfully");
         }
 
-        public async Task<ApiResponse<LoginResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto request)
+        public async Task<ApiResponse<LoginResponseDto>> RefreshTokenAsync(string? refreshToken, RefreshTokenRequestDto request)
         {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                return ApiResponse<LoginResponseDto>.Fail("Refresh token missing.", StatusCodes.Status401Unauthorized);
+
             var principal = GetPrincipalFromExpiredToken(request.AccessToken);
             if (principal == null)
                 return ApiResponse<LoginResponseDto>.Fail("Invalid access token.", StatusCodes.Status401Unauthorized);
@@ -140,7 +155,7 @@ namespace Afrimine.Services.BL.Implementation
             var user = await _userManager.FindByIdAsync(userId!);
 
             if (user == null
-                || user.RefreshToken != request.RefreshToken
+                || user.RefreshToken != refreshToken
                 || user.RefreshTokenExpiry <= DateTime.UtcNow)
             {
                 return ApiResponse<LoginResponseDto>.Fail("Invalid or expired refresh token.", StatusCodes.Status401Unauthorized);
@@ -150,12 +165,11 @@ namespace Afrimine.Services.BL.Implementation
             var newAccessToken = CreateAccessToken(user.Id, user.Email!, roles);
             var newRefreshToken = GenerateRefreshToken();
 
-            // Rotate refresh token
             user.RefreshToken = newRefreshToken;
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
             await _userManager.UpdateAsync(user);
 
-            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(newAccessToken, newRefreshToken));
+            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(newAccessToken), newRefreshToken);
         }
 
         public async Task<ApiResponse<string>> RevokeTokenAsync(string userId)
@@ -171,73 +185,12 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("Token revoked successfully.");
         }
 
-        #region Private Methods
-        async Task<ApiResponse<(User user, string[] roles)>> ValidateUser(LoginRequestDto dto)
-        {
-            if(string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
-            {
-                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.InvalidEmailOrPassword, 400);
-            }
-
-            var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user == null)
-            {
-                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.UserRecordNotFound, 404);
-            }
-
-            if (!user.EmailConfirmed || user.Status != AccountStatus.Active)
-            {
-                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.EmailNotConfirmedOrInactive, 403);
-            }
-
-            var check = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
-            if (!check.Succeeded)
-            {
-                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.WrongPassword, 403);
-            }
-
-            var roles = await _userManager.GetRolesAsync(user);
-            if (roles == null || roles.Count == 0)
-            {
-                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.NoAssignedRole, 403);
-            }
-
-            return ApiResponse<(User user, string[] roles)>.Ok((user, roles.ToArray()));
-        }
-
-        string CreateAccessToken(string userid, string email, string[] roles)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, userid),
-                new Claim(ClaimTypes.Name, email),
-            };
-
-            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
-
-            var key = Encoding.UTF8.GetBytes(_settings.JwtKey);
-            var secret = new SymmetricSecurityKey(key);
-            var credentials = new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
-
-            var now = DateTime.UtcNow;
-            var jwtToken = new JwtSecurityToken(
-                    issuer: _settings.JwtIssuer,
-                    audience: _settings.JwtAudience,
-                    claims: claims,
-                    notBefore: now,
-                    expires:   now.AddMinutes(_settings.JwtExpirationMinutes),
-                    signingCredentials: credentials
-                );
-
-            return new JwtSecurityTokenHandler().WriteToken(jwtToken);
-        }
-
         public async Task<ApiResponse<string>> ConfirmEmail(OtpForCreationDto model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
             {
-                return ApiResponse<string>.Fail(string.Format(ResponseMessages.UserRecordNotFound, model.Email),404);
+                return ApiResponse<string>.Fail(string.Format(ResponseMessages.UserRecordNotFound, model.Email), 404);
             }
 
             var hash = TokenHelpers.HashToken(model.Otp, _settings.JwtKey);
@@ -253,8 +206,8 @@ namespace Afrimine.Services.BL.Implementation
 
             user.EmailConfirmed = true;
             user.Status = AccountStatus.Active;
-            
-            if(otp != null)
+
+            if (otp != null)
             {
                 _repositoryManager.Otp.DeleteToken(otp);
             }
@@ -322,7 +275,7 @@ namespace Afrimine.Services.BL.Implementation
 
             if (!changePassword.Succeeded)
             {
-                return ApiResponse<string>.Fail(changePassword.Errors.FirstOrDefault()?.Description ?? ResponseMessages.PasswordResetFailed,StatusCodes.Status400BadRequest);
+                return ApiResponse<string>.Fail(changePassword.Errors.FirstOrDefault()?.Description ?? ResponseMessages.PasswordResetFailed, StatusCodes.Status400BadRequest);
             }
 
             _repositoryManager.Otp.DeleteToken(otp);
@@ -358,6 +311,164 @@ namespace Afrimine.Services.BL.Implementation
             Notifications.SendEmail(user.Email!, "Confirm Email Address", html, html);
 
             return ApiResponse<string>.Ok(user.Email!, 200, "OTP resent successfully.");
+        }
+
+        public async Task<ApiResponse<string>> SetupBusinessProfileAsync(string userId, BusinessProfileDto request)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var isVendor = VendorRoles.Any(r => roles.Contains(r.ToString()));
+            if (!isVendor)
+                return ApiResponse<string>.Fail("Only vendors can setup a business profile.", StatusCodes.Status403Forbidden);
+
+            var profile = await _repositoryManager.VendorProfile.GetByUserId(userId);
+            if (profile == null)
+            {
+                profile = new VendorProfile
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId
+                };
+                await _repositoryManager.VendorProfile.Create(profile);
+            }
+
+            profile.BusinessType = request.BusinessType;
+            profile.Country = request.Country;
+            profile.StateOrRegion = request.StateOrRegion;
+            profile.OfficeAddress = request.OfficeAddress;
+            profile.Website = request.Website;
+            profile.OnboardingStep = 2;
+            profile.UpdatedAt = DateTime.UtcNow;
+
+            await _repositoryManager.SaveAsync();
+
+            return ApiResponse<string>.Ok("Business profile saved successfully.", 200);
+        }
+
+        public async Task<ApiResponse<string>> UploadKycAsync(string userId, KycUploadDto request)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
+
+            var profile = await _repositoryManager.VendorProfile.GetByUserId(userId);
+            if (profile == null)
+                return ApiResponse<string>.Fail("Please complete business profile setup first.", StatusCodes.Status400BadRequest);
+
+            if (profile.OnboardingStep < 2)
+                return ApiResponse<string>.Fail("Please complete business profile setup first.", StatusCodes.Status400BadRequest);
+
+            var fileUrl = await UploadFileAsync(request.File);
+
+            profile.DocumentType = request.DocumentType;
+            profile.DocumentUrl = fileUrl;
+            profile.DocumentFileName = request.File.FileName;
+            profile.OnboardingStep = 3;
+            profile.IsComplete = true;
+            profile.UpdatedAt = DateTime.UtcNow;
+
+            await _repositoryManager.SaveAsync();
+
+            return ApiResponse<string>.Ok("KYC document uploaded successfully.", 200);
+        }
+
+        public async Task<ApiResponse<VendorProfileResponseDto>> GetVendorProfileAsync(string userId)
+        {
+            var profile = await _repositoryManager.VendorProfile.GetByUserId(userId);
+            if (profile == null)
+                return ApiResponse<VendorProfileResponseDto>.Fail("Profile not found.", StatusCodes.Status404NotFound);
+
+            return ApiResponse<VendorProfileResponseDto>.Ok(new VendorProfileResponseDto
+            {
+                BusinessType = profile.BusinessType,
+                Country = profile.Country,
+                StateOrRegion = profile.StateOrRegion,
+                OfficeAddress = profile.OfficeAddress,
+                Website = profile.Website,
+                DocumentType = profile.DocumentType,
+                DocumentFileName = profile.DocumentFileName,
+                DocumentUrl = profile.DocumentUrl,
+                OnboardingStep = profile.OnboardingStep,
+                IsComplete = profile.IsComplete
+            });
+        }
+
+        #region Private Methods
+        async Task<ApiResponse<(User user, string[] roles)>> ValidateUser(LoginRequestDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.InvalidEmailOrPassword, 400);
+            }
+
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+            if (user == null)
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.UserRecordNotFound, 404);
+            }
+
+            if (!user.EmailConfirmed || user.Status != AccountStatus.Active)
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.EmailNotConfirmedOrInactive, 403);
+            }
+
+            var check = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
+            if (!check.Succeeded)
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.WrongPassword, 403);
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles == null || roles.Count == 0)
+            {
+                return ApiResponse<(User user, string[] roles)>.Fail(ResponseMessages.NoAssignedRole, 403);
+            }
+
+            return ApiResponse<(User user, string[] roles)>.Ok((user, roles.ToArray()));
+        }
+
+        string CreateAccessToken(string userid, string email, string[] roles)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, userid),
+                new Claim(ClaimTypes.Name, email),
+            };
+
+            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+            var key = Encoding.UTF8.GetBytes(_settings.JwtKey);
+            var secret = new SymmetricSecurityKey(key);
+            var credentials = new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
+
+            var now = DateTime.UtcNow;
+            var jwtToken = new JwtSecurityToken(
+                    issuer: _settings.JwtIssuer,
+                    audience: _settings.JwtAudience,
+                    claims: claims,
+                    notBefore: now,
+                    expires: now.AddMinutes(_settings.JwtExpirationMinutes),
+                    signingCredentials: credentials
+                );
+
+            return new JwtSecurityTokenHandler().WriteToken(jwtToken);
+        }
+
+        private async Task<string> UploadFileAsync(IFormFile file)
+        {
+            var uploads = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+            Directory.CreateDirectory(uploads);
+
+            var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+            var filePath = Path.Combine(uploads, fileName);
+
+            using var stream = new FileStream(filePath, FileMode.Create);
+            await file.CopyToAsync(stream);
+
+            return filePath; // replace with your CDN/storage URL in production
         }
 
         private ApiResponse<string> ValidateOtp(OtpEntry? otp)
@@ -407,6 +518,14 @@ namespace Afrimine.Services.BL.Implementation
 
             return principal;
         }
+        
+        private static readonly Role[]
+            VendorRoles =
+            {
+            Role.Buyer,
+            Role.Vendor,
+            Role.Support
+        };
         #endregion
     }
 }

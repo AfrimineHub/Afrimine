@@ -1,4 +1,6 @@
-﻿namespace Afrimine.Repository
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace Afrimine.Repository
 {
     public interface IRepositoryManager
     {
@@ -6,5 +8,6 @@
         ISendEmailRepository SendEmail { get; }
 
         Task SaveAsync();
+        IVendorProfileRepository VendorProfile { get; }
     }
 }

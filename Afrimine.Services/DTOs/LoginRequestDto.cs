@@ -6,6 +6,6 @@
         public string Password { get; set; } = default!;
     }
 
-    public record LoginResponseDto(string AccessToken, string RefreshToken);
-    public record RefreshTokenRequestDto(string AccessToken, string RefreshToken);
+    public record LoginResponseDto(string AccessToken);
+    public record RefreshTokenRequestDto(string AccessToken);
 }
