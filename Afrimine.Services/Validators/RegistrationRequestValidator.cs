@@ -22,7 +22,7 @@ namespace Afrimine.Services.Validators
             RuleFor(x => x).Must(args => ValidatorHelpers.PasswordMatches(args.Password, args.ConfirmPassword))
                 .WithMessage("Password and Confirm Password must match");
 
-            RuleFor(x => x.Role)
+            RuleFor(x => x.Type)
                 .IsInEnum().WithMessage("Please select a valid role");
         }
     }

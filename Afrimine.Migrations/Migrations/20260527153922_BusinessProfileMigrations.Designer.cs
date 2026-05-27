@@ -3,6 +3,7 @@ using System;
 using Afrimine.Migrations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Afrimine.Migrations.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260527153922_BusinessProfileMigrations")]
+    partial class BusinessProfileMigrations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -163,62 +166,6 @@ namespace Afrimine.Migrations.Migrations
                     b.ToTable("AspNetUsers", "afrimine-api-dev");
                 });
 
-            modelBuilder.Entity("Afrimine.Model.Entities.VendorProfile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("BusinessType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Country")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DocumentFileName")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("DocumentType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("DocumentUrl")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsComplete")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("OfficeAddress")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("OnboardingStep")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("StateOrRegion")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Website")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("VendorProfiles", "afrimine-api-dev");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -248,28 +195,28 @@ namespace Afrimine.Migrations.Migrations
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b526",
-                            ConcurrencyStamp = "5/27/2026 4:59:00 PM",
+                            ConcurrencyStamp = "5/27/2026 3:39:21 PM",
                             Name = "Vendor",
                             NormalizedName = "VENDOR"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b527",
-                            ConcurrencyStamp = "5/27/2026 4:59:00 PM",
+                            ConcurrencyStamp = "5/27/2026 3:39:21 PM",
                             Name = "Buyer",
                             NormalizedName = "BUYER"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b528",
-                            ConcurrencyStamp = "5/27/2026 4:59:00 PM",
+                            ConcurrencyStamp = "5/27/2026 3:39:21 PM",
                             Name = "Support",
                             NormalizedName = "SUPPORT"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b529",
-                            ConcurrencyStamp = "5/27/2026 4:59:00 PM",
+                            ConcurrencyStamp = "5/27/2026 3:39:21 PM",
                             Name = "SuperAdmin",
                             NormalizedName = "SUPERADMIN"
                         });
@@ -379,17 +326,6 @@ namespace Afrimine.Migrations.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", "afrimine-api-dev");
-                });
-
-            modelBuilder.Entity("Afrimine.Model.Entities.VendorProfile", b =>
-                {
-                    b.HasOne("Afrimine.Model.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

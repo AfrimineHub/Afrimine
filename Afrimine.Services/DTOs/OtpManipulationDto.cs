@@ -11,15 +11,14 @@ namespace Afrimine.Services.DTOs
     public abstract record OtpManipulationDto
     {
         [Required]
-        public string Email { get; set; }
+        public string Email { get; set; } = default!;
         [Required]
         public EToken Type { get; set; }
     }
 
     public record OtpForCreationDto : OtpManipulationDto
     {
-        public string Otp { get; set; }
-        public string Email { get; set; } = default!;
+        public string Otp { get; set; } = string.Empty;
     }
     public record ResendOtpRequestDto(string Email);
     }

@@ -11,6 +11,7 @@ namespace Afrimine.Migrations
         { }
 
         public DbSet<OtpEntry> OtpEntries { get; set; }
+        public DbSet<VendorProfile> VendorProfiles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

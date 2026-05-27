@@ -1,4 +1,6 @@
-﻿namespace Afrimine.Services.Responses
+﻿using System.Text.Json.Serialization;
+
+namespace Afrimine.Services.Responses
 {
     public class ApiResponse<T>
     {
@@ -6,6 +8,9 @@
         public int StatusCode { get; set; }
         public string Message { get; set; } = default!;
         public T? Data { get; set; }
+
+        [JsonIgnore] // ← add this — never exposed in JSON response
+        public string? RefreshToken { get; set; }
 
         protected ApiResponse() { }
 
@@ -33,6 +38,16 @@
         public static ApiResponse<T> Ok(T data, int statusCode = 200, string message = "Successful")
         {
             return new ApiResponse<T>(data, message, statusCode);
+        }
+
+
+        /// <summary>OK Response with internal refresh token (for cookie use)</summary>
+        public static ApiResponse<T> Ok(T data, string refreshToken, int statusCode = 200, string message = "Successful")
+        {
+            return new ApiResponse<T>(data, message, statusCode)
+            {
+                RefreshToken = refreshToken  // ← stored internally, never sent to client in JSON
+            };
         }
 
         /// <summary>
