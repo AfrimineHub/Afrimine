@@ -3,5 +3,6 @@
     public interface IServiceManager
     {
         IUserService User {  get; }
+        IDashboardService Dashboard { get; }
     }
 }
