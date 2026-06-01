@@ -9,5 +9,10 @@ namespace Afrimine.Repository
 
         Task SaveAsync();
         IVendorProfileRepository VendorProfile { get; }
+
+        IListingRepository Listing { get; }
+        ISavedListingRepository SavedListing { get; }
+        INotificationRepository Notification { get; }
+        IOrderRepository Order { get; }
     }
 }

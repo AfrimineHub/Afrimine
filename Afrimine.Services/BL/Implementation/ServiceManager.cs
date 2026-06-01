@@ -10,6 +10,7 @@ namespace Afrimine.Services.BL.Implementation
     public sealed class ServiceManager : IServiceManager
     {
         private readonly Lazy<IUserService> _userService;
+        private readonly Lazy<IDashboardService> _dashboardService;
 
         public ServiceManager(UserManager<User> userManager,
                             SignInManager<User> signInManager,
@@ -17,8 +18,10 @@ namespace Afrimine.Services.BL.Implementation
                             IRepositoryManager repositoryManager)
         {
             _userService = new Lazy<IUserService>(() => new UserService(userManager, signInManager, options, repositoryManager));
+            _dashboardService = new Lazy<IDashboardService>(() => new DashboardService(repositoryManager));
         }
 
         public IUserService User => _userService.Value;
+        public IDashboardService Dashboard => _dashboardService.Value;
     }
 }
