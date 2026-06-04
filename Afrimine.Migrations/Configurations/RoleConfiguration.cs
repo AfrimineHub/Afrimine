@@ -37,6 +37,13 @@ namespace Afrimine.Migrations.Configurations
                     Name = RoleType.SuperAdmin.ToString(),
                     NormalizedName = RoleType.SuperAdmin.ToString().ToUpper(),
                     ConcurrencyStamp = DateTime.UtcNow.ToString(),
+                },
+                new IdentityRole
+                {
+                    Id = new Guid("FEAF882E-49D1-4047-B8D6-79BB1217B530").ToString(),
+                    Name = RoleType.Investor.ToString(),
+                    NormalizedName = RoleType.Investor.ToString().ToUpper(),
+                    ConcurrencyStamp = DateTime.UtcNow.ToString(),
                 }
             );
         }
