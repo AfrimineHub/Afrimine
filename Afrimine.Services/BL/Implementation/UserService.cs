@@ -18,7 +18,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Role = Afrimine.Model.Enums.Role;
+using RoleType = Afrimine.Model.Enums.RoleType;
 
 namespace Afrimine.Services.BL.Implementation
 {
@@ -76,7 +76,8 @@ namespace Afrimine.Services.BL.Implementation
                 Name = user.FullName,
                 Email = user.Email!,
                 PhoneNumber = user.PhoneNumber!,
-                Status = user.Status
+                Status = user.Status,
+                Type = user.Type
             });
         }
 
@@ -91,16 +92,16 @@ namespace Afrimine.Services.BL.Implementation
             // Only these roles can self-register
             var allowedRoles = new[]
             {
-                Role.Buyer,
-                Role.Vendor,
-                Role.Support,
-                Role.Investor
+                RoleType.Buyer,
+                RoleType.Vendor,
+                RoleType.Support,
+                RoleType.Investor
             };
 
             if (!allowedRoles.Contains(request.Type))
                 return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Type), 403);
 
-            if (request.Type == Role.SuperAdmin || request.Type == Role.Support)
+            if (request.Type == RoleType.SuperAdmin || request.Type == RoleType.Support)
             {
                 return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Type), 403);
             }
@@ -519,12 +520,12 @@ namespace Afrimine.Services.BL.Implementation
             return principal;
         }
         
-        private static readonly Role[]
+        private static readonly RoleType[]
             VendorRoles =
             {
-            Role.Buyer,
-            Role.Vendor,
-            Role.Support
+            RoleType.Buyer,
+            RoleType.Vendor,
+            RoleType.Support
         };
         #endregion
     }

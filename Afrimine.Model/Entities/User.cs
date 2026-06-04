@@ -11,6 +11,7 @@ namespace Afrimine.Model.Entities
         public DateTime? LastLogin { get; set; }
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiry { get; set; }
+        public RoleType Type { get; set; }
     }
 }
                                                       

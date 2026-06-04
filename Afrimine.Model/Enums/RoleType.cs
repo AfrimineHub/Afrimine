@@ -2,7 +2,7 @@
 
 namespace Afrimine.Model.Enums
 {
-    public enum Role
+    public enum RoleType
     {
         Vendor = 1,
         Buyer,
