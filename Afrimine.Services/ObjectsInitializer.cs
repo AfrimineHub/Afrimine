@@ -15,7 +15,8 @@ namespace Afrimine.Services
                 PhoneNumber = requestDto.Phone,
                 FullName = requestDto.FullName.CapitalizeWords(),
                 UserName = requestDto.Email,
-                Status = AccountStatus.Pending
+                Status = AccountStatus.Pending,
+                Type = requestDto.Type
             };
         }
 
