@@ -13,29 +13,29 @@ namespace Afrimine.Migrations.Configurations
                 new IdentityRole
                 {
                     Id = new Guid("FEAF882E-49D1-4047-B8D6-79BB1217B526").ToString(),
-                    Name = Role.Vendor.ToString(),
-                    NormalizedName = Role.Vendor.ToString().ToUpper(),
+                    Name = RoleType.Vendor.ToString(),
+                    NormalizedName = RoleType.Vendor.ToString().ToUpper(),
                     ConcurrencyStamp = DateTime.UtcNow.ToString(),
                 },
                 new IdentityRole
                 {
                     Id = new Guid("FEAF882E-49D1-4047-B8D6-79BB1217B527").ToString(),
-                    Name = Role.Buyer.ToString(),
-                    NormalizedName = Role.Buyer.ToString().ToUpper(),
+                    Name = RoleType.Buyer.ToString(),
+                    NormalizedName = RoleType.Buyer.ToString().ToUpper(),
                     ConcurrencyStamp = DateTime.UtcNow.ToString(),
                 },
                 new IdentityRole
                 {
                     Id = new Guid("FEAF882E-49D1-4047-B8D6-79BB1217B528").ToString(),
-                    Name = Role.Support.ToString(),
-                    NormalizedName = Role.Support.ToString().ToUpper(),
+                    Name = RoleType.Support.ToString(),
+                    NormalizedName = RoleType.Support.ToString().ToUpper(),
                     ConcurrencyStamp = DateTime.UtcNow.ToString(),
                 },
                 new IdentityRole
                 {
                     Id = new Guid("FEAF882E-49D1-4047-B8D6-79BB1217B529").ToString(),
-                    Name = Role.SuperAdmin.ToString(),
-                    NormalizedName = Role.SuperAdmin.ToString().ToUpper(),
+                    Name = RoleType.SuperAdmin.ToString(),
+                    NormalizedName = RoleType.SuperAdmin.ToString().ToUpper(),
                     ConcurrencyStamp = DateTime.UtcNow.ToString(),
                 }
             );

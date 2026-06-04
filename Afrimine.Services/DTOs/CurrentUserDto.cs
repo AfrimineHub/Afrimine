@@ -10,15 +10,16 @@ namespace Afrimine.Services.DTOs
         public string Email { get; set; } = default!;
         public AccountStatus Status { get; set; }
         public string StatusText => Status.GetDescription();
+        public RoleType Type { get; set; }
     }
 
     public static class Roles
     {
-        public const string Vendor = nameof(Role.Vendor);
-        public const string Buyer = nameof(Role.Buyer);
-        public const string Investor = nameof(Role.Investor);
-        public const string Support = nameof(Role.Support);
-        public const string SuperAdmin = nameof(Role.SuperAdmin);
+        public const string Vendor = nameof(RoleType.Vendor);
+        public const string Buyer = nameof(RoleType.Buyer);
+        public const string Investor = nameof(RoleType.Investor);
+        public const string Support = nameof(RoleType.Support);
+        public const string SuperAdmin = nameof(RoleType.SuperAdmin);
 
         // Useful combinations
         public const string AdminOnly = $"{SuperAdmin}";

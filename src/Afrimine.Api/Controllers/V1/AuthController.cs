@@ -76,6 +76,7 @@ namespace Afrimine.Api.Controllers.V1
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
+        [AllowAnonymous]
         [HttpPost("reset-password")]
         [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
         public async Task<IActionResult> ResetPassword([FromBody] PasswordResetDto request)
@@ -89,6 +90,7 @@ namespace Afrimine.Api.Controllers.V1
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
+        [AllowAnonymous]
         [HttpPost("forgot-password")]
         [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
         public async Task<IActionResult> ForgetPassword([FromBody] ChangeForgotPasswordRequestModel request)
