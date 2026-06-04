@@ -479,7 +479,7 @@ namespace Afrimine.Services.BL.Implementation
                 return ApiResponse<string>.Fail(ResponseMessages.OtpNotFound, StatusCodes.Status404NotFound);
             }
 
-            if (otp.ExpiresAt < DateTime.Now)
+            if (otp.ExpiresAt < DateTime.UtcNow)
             {
                 return ApiResponse<string>.Fail(ResponseMessages.OtpExpired, StatusCodes.Status404NotFound);
             }
