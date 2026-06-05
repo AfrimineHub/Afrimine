@@ -25,8 +25,7 @@ namespace Afrimine.Api.Controllers.V1
         /// </summary>
         /// <returns></returns>
         [HttpGet("current")]
-        //[Authorize]
-        [Authorize(Roles = "Vendor,Buyer,Investor,Support,SuperAdmin")]
+        [Authorize(Roles = "Vendor,Buyer,Investor,Support,Supplier, SuperAdmin")]
         [ProducesResponseType(typeof(ApiResponse<CurrentUserDto>), 200)]
         public async Task<IActionResult> Current()
         {

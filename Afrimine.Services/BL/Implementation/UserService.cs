@@ -94,7 +94,7 @@ namespace Afrimine.Services.BL.Implementation
             {
                 RoleType.Buyer,
                 RoleType.Vendor,
-                RoleType.Support,
+                RoleType.Supplier,
                 RoleType.Investor
             };
 
