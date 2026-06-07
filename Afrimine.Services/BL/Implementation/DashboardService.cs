@@ -107,7 +107,7 @@ namespace Afrimine.Services.BL.Implementation
             Location = listing.Location,
             Country = listing.Country,
             ImageUrl = listing.ImageUrl,
-            Category = listing.Category.ToString(),
+            Category = listing.CategoryType.ToString(),
             CreatedAt = listing.CreatedAt
         };
     }

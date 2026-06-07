@@ -4,5 +4,6 @@
     {
         IUserService User {  get; }
         IDashboardService Dashboard { get; }
+        IVendorListingService VendorListing { get; }
     }
 }
