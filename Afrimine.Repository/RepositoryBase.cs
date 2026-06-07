@@ -28,5 +28,6 @@ namespace Afrimine.Repository
         public async Task Create(T entity) => await AppDbContext.Set<T>().AddAsync(entity);
         public void Update (T entity) => AppDbContext.Set<T>().Update(entity);
         public void Delete(T entity) => AppDbContext.Set<T>().Remove(entity);
+        
     }
 }

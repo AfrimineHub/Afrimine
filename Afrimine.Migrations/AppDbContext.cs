@@ -7,7 +7,7 @@ namespace Afrimine.Migrations
 {
     public class AppDbContext : IdentityDbContext<User>
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) 
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         { }
 
         public DbSet<OtpEntry> OtpEntries { get; set; }
@@ -16,6 +16,7 @@ namespace Afrimine.Migrations
         public DbSet<SavedListing> SavedListings { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<ListingImage> ListingImages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -40,6 +41,11 @@ namespace Afrimine.Migrations
                 .HasForeignKey(x => x.BuyerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<ListingImage>()
+                .HasOne(x => x.Listing)
+                .WithMany(x => x.Images)
+                .HasForeignKey(x => x.ListingId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             base.OnModelCreating(builder);
         }

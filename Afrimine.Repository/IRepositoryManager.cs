@@ -14,5 +14,6 @@ namespace Afrimine.Repository
         ISavedListingRepository SavedListing { get; }
         INotificationRepository Notification { get; }
         IOrderRepository Order { get; }
+        IListingImageRepository ListingImage { get; }
     }
 }

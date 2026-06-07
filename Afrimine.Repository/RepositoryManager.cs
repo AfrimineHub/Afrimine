@@ -11,6 +11,8 @@ namespace Afrimine.Repository
         private readonly Lazy<ISavedListingRepository> _savedListingRepository;
         private readonly Lazy<INotificationRepository> _notificationRepository;
         private readonly Lazy<IOrderRepository> _orderRepository;
+        private readonly Lazy<IListingImageRepository> _listingImageRepository;
+
         public RepositoryManager(AppDbContext appDbContext)
         {
             _repositoryContext = appDbContext;
@@ -20,6 +22,7 @@ namespace Afrimine.Repository
             _savedListingRepository = new Lazy<ISavedListingRepository>(() => new SavedListingRepository(appDbContext));
             _notificationRepository = new Lazy<INotificationRepository>(() => new NotificationRepository(appDbContext));
             _orderRepository = new Lazy<IOrderRepository>(() => new OrderRepository(appDbContext));
+            _listingImageRepository = new Lazy<IListingImageRepository>(() => new ListingImageRepository(appDbContext));
         }
 
         public IOtpRepository Otp => _otpRepository.Value;
@@ -31,5 +34,6 @@ namespace Afrimine.Repository
         public ISavedListingRepository SavedListing => _savedListingRepository.Value;
         public INotificationRepository Notification => _notificationRepository.Value;
         public IOrderRepository Order => _orderRepository.Value;
+        public IListingImageRepository ListingImage => _listingImageRepository.Value;
     }
 }

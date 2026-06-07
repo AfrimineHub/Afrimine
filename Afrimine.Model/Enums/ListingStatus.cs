@@ -2,8 +2,12 @@
 {
     public enum ListingStatus
     {
-        Active = 1,
-        Inactive = 2,
-        Sold = 3
+        Draft,
+        Published,
+        PendingReview,
+        Active,
+        Inactive,
+        Archived,
+        Sold
     }
 }
