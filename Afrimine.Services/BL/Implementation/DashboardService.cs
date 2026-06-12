@@ -16,17 +16,40 @@ namespace Afrimine.Services.BL.Implementation
             _repository = repository;
         }
 
+        //public async Task<ApiResponse<DashboardSummaryDto>> GetSummaryAsync(string userId)
+        //{
+        //    var savedCount = await _repository.SavedListing.CountByUserIdAsync(userId);
+        //    var ongoingOrders = await _repository.Order.CountByUserAndStatusAsync(userId, OrderStatus.Ongoing);
+        //    var unreadNotifications = await _repository.Notification.CountUnreadAsync(userId);
+
+        //    return ApiResponse<DashboardSummaryDto>.Ok(new DashboardSummaryDto
+        //    {
+        //        SavedListingsCount = savedCount,
+        //        UnreadMessagesCount = unreadNotifications,
+        //        OngoingOrdersCount = ongoingOrders
+        //    });
+        //}
+
         public async Task<ApiResponse<DashboardSummaryDto>> GetSummaryAsync(string userId)
         {
             var savedCount = await _repository.SavedListing.CountByUserIdAsync(userId);
             var ongoingOrders = await _repository.Order.CountByUserAndStatusAsync(userId, OrderStatus.Ongoing);
             var unreadNotifications = await _repository.Notification.CountUnreadAsync(userId);
+            var totalListings = await _repository.Listing.CountByVendorAsync(userId);
+            var activeQuotes = await _repository.Listing.CountActiveQuotesAsync(userId);
+            var successfulOrders = await _repository.Order.CountSuccessfulOrdersAsync(userId);
+            var (payoutAmount, payoutCurrency) = await _repository.Order.GetPendingPayoutAsync(userId);
 
             return ApiResponse<DashboardSummaryDto>.Ok(new DashboardSummaryDto
             {
                 SavedListingsCount = savedCount,
                 UnreadMessagesCount = unreadNotifications,
-                OngoingOrdersCount = ongoingOrders
+                OngoingOrdersCount = ongoingOrders,
+                TotalListingsCount = totalListings,
+                ActiveQuotesCount = activeQuotes,
+                SuccessfulOrdersCount = successfulOrders,
+                PendingPayoutAmount = payoutAmount,
+                PendingPayoutCurrency = payoutCurrency
             });
         }
 
@@ -97,6 +120,35 @@ namespace Afrimine.Services.BL.Implementation
             await _repository.Notification.MarkAllAsReadAsync(userId);
             await _repository.SaveAsync();
             return ApiResponse<string>.Ok("Notifications marked as read.");
+        }
+
+        public async Task<ApiResponse<SubscriptionSummaryDto>> GetSubscriptionAsync(string userId)
+        {
+            var subscription = await _repository.Subscription.GetActiveByUserIdAsync(userId);
+
+            if (subscription is null)
+                return ApiResponse<SubscriptionSummaryDto>.Fail("No active subscription found.", 404);
+
+            var listingsUsed = await _repository.Listing.CountByVendorAsync(userId);
+            var listingsRemaining = Math.Max(0, subscription.ListingsLimit - listingsUsed);
+            var usagePercent = subscription.ListingsLimit > 0
+                ? Math.Round((double)listingsUsed / subscription.ListingsLimit * 100, 1)
+                : 0;
+
+            // CanUpgrade = true when usage is at or above 80% or limit is reached
+            var canUpgrade = usagePercent >= 80;
+
+            return ApiResponse<SubscriptionSummaryDto>.Ok(new SubscriptionSummaryDto
+            {
+                PlanId = subscription.PlanId,
+                PlanName = subscription.PlanName,
+                ListingsLimit = subscription.ListingsLimit,
+                ListingsUsed = listingsUsed,
+                ListingsRemaining = listingsRemaining,
+                UsagePercent = usagePercent,
+                CanUpgrade = canUpgrade,
+                RenewsAt = subscription.RenewsAt
+            });
         }
 
         private static ListingCardDto MapToListingCard(Listing listing) => new()

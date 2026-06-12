@@ -12,6 +12,10 @@ namespace Afrimine.Repository
         private readonly Lazy<INotificationRepository> _notificationRepository;
         private readonly Lazy<IOrderRepository> _orderRepository;
         private readonly Lazy<IListingImageRepository> _listingImageRepository;
+        private readonly Lazy<ISubscriptionRepository> _subscriptionRepository;
+        private readonly Lazy<IRevenueRepository> _revenueRepository;
+        private readonly Lazy<IQuoteRepository> _quoteRepository;
+        private readonly Lazy<IPayoutRepository> _payoutRepository;
 
         public RepositoryManager(AppDbContext appDbContext)
         {
@@ -23,6 +27,10 @@ namespace Afrimine.Repository
             _notificationRepository = new Lazy<INotificationRepository>(() => new NotificationRepository(appDbContext));
             _orderRepository = new Lazy<IOrderRepository>(() => new OrderRepository(appDbContext));
             _listingImageRepository = new Lazy<IListingImageRepository>(() => new ListingImageRepository(appDbContext));
+            _subscriptionRepository = new Lazy<ISubscriptionRepository>(() => new SubscriptionRepository(appDbContext));
+            _revenueRepository = new Lazy<IRevenueRepository>(() => new RevenueRepository(appDbContext));
+            _quoteRepository = new Lazy<IQuoteRepository>(() => new QuoteRepository(appDbContext));
+            _payoutRepository = new Lazy<IPayoutRepository>(() => new PayoutRepository(appDbContext));
         }
 
         public IOtpRepository Otp => _otpRepository.Value;
@@ -35,5 +43,9 @@ namespace Afrimine.Repository
         public INotificationRepository Notification => _notificationRepository.Value;
         public IOrderRepository Order => _orderRepository.Value;
         public IListingImageRepository ListingImage => _listingImageRepository.Value;
+        public IRevenueRepository Revenue => _revenueRepository.Value;
+        public ISubscriptionRepository Subscription => _subscriptionRepository.Value;
+        public IQuoteRepository Quote => _quoteRepository.Value;
+        public IPayoutRepository Payout => _payoutRepository.Value;
     }
 }

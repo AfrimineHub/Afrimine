@@ -49,5 +49,26 @@ namespace Afrimine.Repository
                 .OrderByDescending(x => x.CreatedAt)
                 .Take(count)
                 .ToListAsync();
+
+        public async Task<int> CountByVendorAsync(string vendorId) => 
+            await FindByCondition(x => x.OwnerId == vendorId && !x.IsDeleted, false)
+            .CountAsync();
+
+        public async Task<int> CountActiveQuotesAsync(string vendorId) =>
+            await FindByCondition(x => x.OwnerId == vendorId && !x.IsDeleted
+                && x.Status == ListingStatus.Active, false)
+                .CountAsync();
+
+        public async Task<IEnumerable<Listing>> GetPerformanceListingsAsync(string vendorId, int page, int pageSize) => 
+            await FindByCondition(x => x.OwnerId == vendorId && !x.IsDeleted, false)
+            .Include(x => x.SavedByUsers)
+            .OrderByDescending(x => x.ViewsCount)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        public async Task<int> CountTotalAsync(string vendorId) =>
+            await FindByCondition(x => x.OwnerId == vendorId && !x.IsDeleted, false)
+                .CountAsync();
     }
 }

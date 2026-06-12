@@ -17,6 +17,10 @@ namespace Afrimine.Migrations
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<ListingImage> ListingImages { get; set; }
+        public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<Revenue> Revenues { get; set; }
+        public DbSet<Quote> Quotes { get; set; }
+        public DbSet<Payout> Payouts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -46,6 +50,33 @@ namespace Afrimine.Migrations
                 .WithMany(x => x.Images)
                 .HasForeignKey(x => x.ListingId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Subscription>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Revenue>()
+                .HasOne(x => x.Vendor)
+                .WithMany()
+                .HasForeignKey(x => x.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Quote>()
+                .HasOne(x => x.Vendor).WithMany()
+                .HasForeignKey(x => x.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Quote>()
+                .HasOne(x => x.Buyer).WithMany()
+                .HasForeignKey(x => x.BuyerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Payout>()
+                .HasOne(x => x.Vendor).WithMany()
+                .HasForeignKey(x => x.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             base.OnModelCreating(builder);
         }

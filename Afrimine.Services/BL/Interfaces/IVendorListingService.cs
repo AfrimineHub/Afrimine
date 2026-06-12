@@ -13,5 +13,11 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<List<ListingImageDto>>> UploadImagesAsync(string vendorId, Guid listingId, UploadListingImagesDto request);
         Task<ApiResponse<string>> DeleteImageAsync(string vendorId, Guid listingId, Guid imageId);
         Task<ApiResponse<string>> PublishListingAsync(string vendorId, Guid listingId);
+        Task<ApiResponse<RevenueSummaryDto>> GetRevenueSummaryAsync(string vendorId);
+        Task<ApiResponse<PagedResultDto<VendorQuoteDto>>> GetQuotesAsync(string vendorId, VendorQuoteQueryDto query);
+        Task<ApiResponse<PayoutSummaryDto>> GetPayoutSummaryAsync(string vendorId);
+        Task<ApiResponse<PagedResultDto<VendorOrderDto>>> GetOrdersAsync(string vendorId, VendorOrderQueryDto query);
+        Task<ApiResponse<PagedResultDto<ListingPerformanceItemDto>>> GetListingsPerformanceAsync(string vendorId, int page, int pageSize);
+        Task<ApiResponse<VendorDashboardDto>> GetVendorDashboardAsync(string vendorId);
     }
 }
