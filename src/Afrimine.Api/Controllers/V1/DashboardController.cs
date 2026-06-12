@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Afrimine.Api.Controllers
+namespace Afrimine.Api.Controllers.V1
 {
     [Route("api/v{version:apiversion}/dashboard")]
     [ApiVersion("1.0")]
@@ -96,6 +96,18 @@ namespace Afrimine.Api.Controllers
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
             var response = await _service.Dashboard.UnsaveListingAsync(userId, listingId);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Get subscription details for the authenticated user</summary>
+        [HttpGet("subscription")]
+        [ProducesResponseType(typeof(ApiResponse<SubscriptionSummaryDto>), 200)]
+        public async Task<IActionResult> GetSubscription()
+        {
+            var userId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+            var response = await _service.Dashboard.GetSubscriptionAsync(userId);
             return StatusCode(response.StatusCode, response);
         }
     }

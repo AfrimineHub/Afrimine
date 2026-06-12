@@ -12,5 +12,6 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<string>> SaveListingAsync(string userId, SaveListingRequestDto request);
         Task<ApiResponse<string>> UnsaveListingAsync(string userId, Guid listingId);
         Task<ApiResponse<string>> MarkNotificationsReadAsync(string userId);
+        Task<ApiResponse<SubscriptionSummaryDto>> GetSubscriptionAsync(string userId);
     }
 }

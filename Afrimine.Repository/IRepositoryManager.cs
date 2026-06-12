@@ -15,5 +15,9 @@ namespace Afrimine.Repository
         INotificationRepository Notification { get; }
         IOrderRepository Order { get; }
         IListingImageRepository ListingImage { get; }
+        ISubscriptionRepository Subscription { get; }
+        IRevenueRepository Revenue { get; }
+        IQuoteRepository Quote { get; }
+        IPayoutRepository Payout { get; }
     }
 }

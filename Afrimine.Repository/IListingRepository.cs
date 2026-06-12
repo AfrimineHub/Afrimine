@@ -13,5 +13,9 @@ namespace Afrimine.Repository
          ListingStatus? status, string? search, ListingCategory? category);
 
         Task<Listing?> GetByIdWithImagesAsync(Guid id);
+        Task<int> CountByVendorAsync(string vendorId);
+        Task<int> CountActiveQuotesAsync(string vendorId);
+        Task<IEnumerable<Listing>> GetPerformanceListingsAsync(string vendorId, int page, int pageSize);
+        Task<int> CountTotalAsync(string vendorId);
     }
 }

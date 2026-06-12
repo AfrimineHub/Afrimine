@@ -3,6 +3,7 @@ using System;
 using Afrimine.Migrations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Afrimine.Migrations.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260612050112_SubscriptionAndRevenueMigration")]
+    partial class SubscriptionAndRevenueMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -315,113 +318,6 @@ namespace Afrimine.Migrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("OtpEntries", "afrimine-api-dev");
-                });
-
-            modelBuilder.Entity("Afrimine.Model.Entities.Payout", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Reference")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("text");
-
-                    b.Property<string>("VendorId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("VendorId");
-
-                    b.ToTable("Payouts", "afrimine-api-dev");
-                });
-
-            modelBuilder.Entity("Afrimine.Model.Entities.Quote", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("BuyerId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("ListingId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("text");
-
-                    b.Property<string>("VendorId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BuyerId");
-
-                    b.HasIndex("ListingId");
-
-                    b.HasIndex("VendorId");
-
-                    b.ToTable("Quotes", "afrimine-api-dev");
                 });
 
             modelBuilder.Entity("Afrimine.Model.Entities.Revenue", b =>
@@ -740,42 +636,42 @@ namespace Afrimine.Migrations.Migrations
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b526",
-                            ConcurrencyStamp = "6/12/2026 5:55:40 AM",
+                            ConcurrencyStamp = "6/12/2026 5:01:12 AM",
                             Name = "Vendor",
                             NormalizedName = "VENDOR"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b527",
-                            ConcurrencyStamp = "6/12/2026 5:55:40 AM",
+                            ConcurrencyStamp = "6/12/2026 5:01:12 AM",
                             Name = "Buyer",
                             NormalizedName = "BUYER"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b528",
-                            ConcurrencyStamp = "6/12/2026 5:55:40 AM",
+                            ConcurrencyStamp = "6/12/2026 5:01:12 AM",
                             Name = "Support",
                             NormalizedName = "SUPPORT"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b529",
-                            ConcurrencyStamp = "6/12/2026 5:55:40 AM",
+                            ConcurrencyStamp = "6/12/2026 5:01:12 AM",
                             Name = "SuperAdmin",
                             NormalizedName = "SUPERADMIN"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b530",
-                            ConcurrencyStamp = "6/12/2026 5:55:40 AM",
+                            ConcurrencyStamp = "6/12/2026 5:01:12 AM",
                             Name = "Investor",
                             NormalizedName = "INVESTOR"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b531",
-                            ConcurrencyStamp = "6/12/2026 5:55:40 AM",
+                            ConcurrencyStamp = "6/12/2026 5:01:12 AM",
                             Name = "Supplier",
                             NormalizedName = "SUPPLIER"
                         });
@@ -937,44 +833,6 @@ namespace Afrimine.Migrations.Migrations
                     b.Navigation("Buyer");
 
                     b.Navigation("Listing");
-                });
-
-            modelBuilder.Entity("Afrimine.Model.Entities.Payout", b =>
-                {
-                    b.HasOne("Afrimine.Model.Entities.User", "Vendor")
-                        .WithMany()
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Vendor");
-                });
-
-            modelBuilder.Entity("Afrimine.Model.Entities.Quote", b =>
-                {
-                    b.HasOne("Afrimine.Model.Entities.User", "Buyer")
-                        .WithMany()
-                        .HasForeignKey("BuyerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Afrimine.Model.Entities.Listing", "Listing")
-                        .WithMany()
-                        .HasForeignKey("ListingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Afrimine.Model.Entities.User", "Vendor")
-                        .WithMany()
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Buyer");
-
-                    b.Navigation("Listing");
-
-                    b.Navigation("Vendor");
                 });
 
             modelBuilder.Entity("Afrimine.Model.Entities.Revenue", b =>

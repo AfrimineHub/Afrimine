@@ -5,6 +5,11 @@
         public int SavedListingsCount { get; set; }
         public int UnreadMessagesCount { get; set; }
         public int OngoingOrdersCount { get; set; }
+        public int TotalListingsCount { get; set; }
+        public int ActiveQuotesCount { get; set; }
+        public decimal PendingPayoutAmount { get; set; }
+        public string PendingPayoutCurrency { get; set; } = "USD";
+        public int SuccessfulOrdersCount { get; set; }
     }
 
     public class ListingCardDto

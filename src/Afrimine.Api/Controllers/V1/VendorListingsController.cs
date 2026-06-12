@@ -118,5 +118,77 @@ namespace Afrimine.Api.Controllers.V1
             var response = await _service.VendorListing.PublishListingAsync(vendorId, id);
             return StatusCode(response.StatusCode, response);
         }
+
+        /// <summary>Get revenue summary for the authenticated vendor</summary>
+        [HttpGet("/api/v{version:apiVersion}/vendor/revenue/summary")]
+        [ProducesResponseType(typeof(ApiResponse<RevenueSummaryDto>), 200)]
+        public async Task<IActionResult> GetRevenueSummary()
+        {
+            var vendorId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(vendorId)) return Unauthorized();
+
+            var response = await _service.VendorListing.GetRevenueSummaryAsync(vendorId);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Get vendor quotes</summary>
+        [HttpGet("/api/v{version:apiVersion}/vendor/quotes")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResultDto<VendorQuoteDto>>), 200)]
+        public async Task<IActionResult> GetQuotes([FromQuery] VendorQuoteQueryDto query)
+        {
+            var vendorId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(vendorId)) return Unauthorized();
+
+            var response = await _service.VendorListing.GetQuotesAsync(vendorId, query);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Get vendor payout summary</summary>
+        [HttpGet("/api/v{version:apiVersion}/vendor/payout/summary")]
+        [ProducesResponseType(typeof(ApiResponse<PayoutSummaryDto>), 200)]
+        public async Task<IActionResult> GetPayoutSummary()
+        {
+            var vendorId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(vendorId)) return Unauthorized();
+
+            var response = await _service.VendorListing.GetPayoutSummaryAsync(vendorId);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Get vendor orders</summary>
+        [HttpGet("/api/v{version:apiVersion}/vendor/orders")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResultDto<VendorOrderDto>>), 200)]
+        public async Task<IActionResult> GetOrders([FromQuery] VendorOrderQueryDto query)
+        {
+            var vendorId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(vendorId)) return Unauthorized();
+
+            var response = await _service.VendorListing.GetOrdersAsync(vendorId, query);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Get listing performance metrics</summary>
+        [HttpGet("/api/v{version:apiVersion}/vendor/dashboard/listings/performance")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResultDto<ListingPerformanceItemDto>>), 200)]
+        public async Task<IActionResult> GetListingsPerformance([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var vendorId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(vendorId)) return Unauthorized();
+
+            var response = await _service.VendorListing.GetListingsPerformanceAsync(vendorId, page, pageSize);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Get full vendor dashboard — aggregated in one call</summary>
+        [HttpGet("/api/v{version:apiVersion}/vendor/dashboard")]
+        [ProducesResponseType(typeof(ApiResponse<VendorDashboardDto>), 200)]
+        public async Task<IActionResult> GetVendorDashboard()
+        {
+            var vendorId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(vendorId)) return Unauthorized();
+
+            var response = await _service.VendorListing.GetVendorDashboardAsync(vendorId);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

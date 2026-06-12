@@ -47,6 +47,11 @@ namespace Afrimine.Services.BL.Implementation
 
             if (listing.OwnerId != vendorId)
                 return ApiResponse<VendorListingDetailDto>.Fail("Access denied.", 403);
+            // Increment view count — only non-owners
+            listing.ViewsCount++;
+            listing.UpdatedAt = DateTime.UtcNow;
+            _repository.Listing.Update(listing);
+            await _repository.SaveAsync();
 
             return ApiResponse<VendorListingDetailDto>.Ok(MapToDetailDto(listing));
         }
@@ -230,6 +235,221 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("Listing submitted for admin review.");
         }
 
+        public async Task<ApiResponse<RevenueSummaryDto>> GetRevenueSummaryAsync(string vendorId)
+        {
+            var now = DateTime.UtcNow;
+            var thisMonth = await _repository.Revenue.GetMonthInflowAsync(vendorId, now.Year, now.Month);
+
+            // Last month for change percent calculation
+            var lastMonthDate = now.AddMonths(-1);
+            var lastMonth = await _repository.Revenue.GetMonthInflowAsync(vendorId, lastMonthDate.Year, lastMonthDate.Month);
+
+            // Two months ago for total change percent baseline
+            var twoMonthsAgoDate = now.AddMonths(-2);
+            var twoMonthsAgo = await _repository.Revenue.GetMonthInflowAsync(vendorId, twoMonthsAgoDate.Year, twoMonthsAgoDate.Month);
+
+            var totalInflow = await _repository.Revenue.GetTotalInflowAsync(vendorId);
+
+            var thisMonthChangePercent = lastMonth > 0
+                ? Math.Round((double)((thisMonth - lastMonth) / lastMonth) * 100, 1)
+                : thisMonth > 0 ? 100.0 : 0.0;
+
+            var totalInflowChangePercent = twoMonthsAgo > 0
+                ? Math.Round((double)((lastMonth - twoMonthsAgo) / twoMonthsAgo) * 100, 1)
+                : lastMonth > 0 ? 100.0 : 0.0;
+
+            return ApiResponse<RevenueSummaryDto>.Ok(new RevenueSummaryDto
+            {
+                Currency = "USD",
+                TotalInflow = totalInflow,
+                TotalInflowChangePercent = totalInflowChangePercent,
+                ThisMonthInflow = thisMonth,
+                ThisMonthChangePercent = thisMonthChangePercent
+            });
+        }
+
+        public async Task<ApiResponse<PagedResultDto<VendorQuoteDto>>> GetQuotesAsync(
+    string vendorId, VendorQuoteQueryDto query)
+        {
+            var (items, total) = await _repository.Quote.GetVendorQuotesAsync(
+                vendorId, query.Page, query.PageSize, query.Status);
+
+            var result = new PagedResultDto<VendorQuoteDto>
+            {
+                Items = items.Select(q => new VendorQuoteDto
+                {
+                    Id = q.Id,
+                    ListingId = q.ListingId,
+                    ListingTitle = q.Listing.Title,
+                    BuyerName = q.Buyer.UserName ?? string.Empty,
+                    Amount = q.Amount,
+                    Currency = q.Currency,
+                    Status = q.Status.ToString(),
+                    Note = q.Note,
+                    ExpiresAt = q.ExpiresAt,
+                    CreatedAt = q.CreatedAt
+                }),
+                TotalCount = total,
+                Page = query.Page,
+                PageSize = query.PageSize
+            };
+
+            return ApiResponse<PagedResultDto<VendorQuoteDto>>.Ok(result);
+        }
+
+        public async Task<ApiResponse<PayoutSummaryDto>> GetPayoutSummaryAsync(string vendorId)
+        {
+            var pending = await _repository.Payout.GetPendingAmountAsync(vendorId);
+            var totalPaid = await _repository.Payout.GetTotalPaidAsync(vendorId);
+            var recent = await _repository.Payout.GetRecentAsync(vendorId);
+
+            return ApiResponse<PayoutSummaryDto>.Ok(new PayoutSummaryDto
+            {
+                Currency = "USD",
+                PendingAmount = pending,
+                TotalPaid = totalPaid,
+                RecentPayouts = recent.Select(p => new PayoutItemDto
+                {
+                    Id = p.Id,
+                    Amount = p.Amount,
+                    Currency = p.Currency,
+                    Status = p.Status.ToString(),
+                    Reference = p.Reference,
+                    ProcessedAt = p.ProcessedAt,
+                    CreatedAt = p.CreatedAt
+                })
+            });
+        }
+
+        public async Task<ApiResponse<PagedResultDto<VendorOrderDto>>> GetOrdersAsync(
+            string vendorId, VendorOrderQueryDto query)
+        {
+            var (items, total) = await _repository.Order.GetVendorOrdersAsync(
+                vendorId, query.Page, query.PageSize, query.Status);
+
+            var result = new PagedResultDto<VendorOrderDto>
+            {
+                Items = items.Select(o => new VendorOrderDto
+                {
+                    Id = o.Id,
+                    ListingId = o.ListingId,
+                    ListingTitle = o.Listing.Title,
+                    BuyerName = o.Buyer.UserName ?? string.Empty,
+                    Status = o.Status.ToString(),
+                    CreatedAt = o.CreatedAt,
+                    UpdatedAt = o.UpdatedAt
+                }),
+                TotalCount = total,
+                Page = query.Page,
+                PageSize = query.PageSize
+            };
+
+            return ApiResponse<PagedResultDto<VendorOrderDto>>.Ok(result);
+        }
+
+        public async Task<ApiResponse<PagedResultDto<ListingPerformanceItemDto>>> GetListingsPerformanceAsync(string vendorId, int page, int pageSize)
+        {
+            var listings = await _repository.Listing.GetPerformanceListingsAsync(vendorId, page, pageSize);
+            var total = await _repository.Listing.CountTotalAsync(vendorId);
+
+            var result = new PagedResultDto<ListingPerformanceItemDto>
+            {
+                Items = listings.Select(l => new ListingPerformanceItemDto
+                {
+                    ListingId = l.Id,
+                    Title = l.Title,
+                    ViewsCount = l.ViewsCount,
+                    SavesCount = l.SavedByUsers.Count(x => !x.IsDeleted),
+                    InquiriesCount = l.InquiriesCount
+                }),
+                TotalCount = total,
+                Page = page,
+                PageSize = pageSize
+            };
+
+            return ApiResponse<PagedResultDto<ListingPerformanceItemDto>>.Ok(result);
+        }
+
+        public async Task<ApiResponse<VendorDashboardDto>> GetVendorDashboardAsync(string vendorId)
+        {
+            // Run all queries in parallel
+            var subscriptionTask = _repository.Subscription.GetActiveByUserIdAsync(vendorId);
+            var revenueTask = GetRevenueSummaryAsync(vendorId);
+            var totalListingsTask = _repository.Listing.CountTotalAsync(vendorId);
+            var activeQuotesTask = _repository.Quote.CountActiveAsync(vendorId);
+            var ongoingOrdersTask = _repository.Order.CountByUserAndStatusAsync(vendorId, OrderStatus.Ongoing);
+            var unreadTask = _repository.Notification.CountUnreadAsync(vendorId);
+            var pendingPayoutTask = _repository.Payout.GetPendingAmountAsync(vendorId);
+            var successfulOrdersTask = _repository.Order.CountSuccessfulOrdersAsync(vendorId);
+            var performanceTask = _repository.Listing.GetPerformanceListingsAsync(vendorId, 1, 5);
+            var notificationsTask = _repository.Notification.GetByUserIdAsync(vendorId, 5);
+
+            await Task.WhenAll(
+                subscriptionTask, totalListingsTask, activeQuotesTask,
+                ongoingOrdersTask, unreadTask, pendingPayoutTask,
+                successfulOrdersTask, performanceTask, notificationsTask);
+
+            var subscription = await subscriptionTask;
+            var revenue = await revenueTask;
+            var listingsUsed = await _repository.Listing.CountByVendorAsync(vendorId);
+
+            SubscriptionSummaryDto? subscriptionDto = null;
+            if (subscription is not null)
+            {
+                var remaining = Math.Max(0, subscription.ListingsLimit - listingsUsed);
+                var usagePct = subscription.ListingsLimit > 0
+                    ? Math.Round((double)listingsUsed / subscription.ListingsLimit * 100, 1) : 0;
+
+                subscriptionDto = new SubscriptionSummaryDto
+                {
+                    PlanId = subscription.PlanId,
+                    PlanName = subscription.PlanName,
+                    ListingsLimit = subscription.ListingsLimit,
+                    ListingsUsed = listingsUsed,
+                    ListingsRemaining = remaining,
+                    UsagePercent = usagePct,
+                    CanUpgrade = usagePct >= 80,
+                    RenewsAt = subscription.RenewsAt
+                };
+            }
+
+            var performance = await performanceTask;
+            var notifications = await notificationsTask;
+
+            var dashboard = new VendorDashboardDto
+            {
+                Subscription = subscriptionDto,
+                Revenue = revenue.Data,
+                Stats = new VendorDashboardStatsDto
+                {
+                    TotalListingsCount = await totalListingsTask,
+                    ActiveQuotesCount = await activeQuotesTask,
+                    OngoingOrdersCount = await ongoingOrdersTask,
+                    UnreadMessagesCount = await unreadTask,
+                    PendingPayoutAmount = await pendingPayoutTask,
+                    SuccessfulOrdersCount = await successfulOrdersTask
+                },
+                ListingPerformance = performance.Select(l => new ListingPerformanceItemDto
+                {
+                    ListingId = l.Id,
+                    Title = l.Title,
+                    ViewsCount = l.ViewsCount,
+                    SavesCount = l.SavedByUsers.Count(x => !x.IsDeleted),
+                    InquiriesCount = l.InquiriesCount
+                }),
+                RecentNotifications = notifications.Select(n => new NotificationDto
+                {
+                    Id = n.Id,
+                    Title = n.Title,
+                    Message = n.Message,
+                    IsRead = n.IsRead,
+                    CreatedAt = n.CreatedAt
+                })
+            };
+
+            return ApiResponse<VendorDashboardDto>.Ok(dashboard);
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private static async Task<List<ListingImage>> SaveImagesAsync(Guid listingId, List<IFormFile> files)
@@ -268,6 +488,8 @@ namespace Afrimine.Services.BL.Implementation
             Status = l.Status.ToString(),
             PrimaryImageUrl = l.Images.FirstOrDefault(x => x.IsPrimary && !x.IsDeleted)?.ImageUrl
                               ?? l.Images.FirstOrDefault(x => !x.IsDeleted)?.ImageUrl,
+            ViewsCount = l.ViewsCount,
+            InquiriesCount = l.InquiriesCount,
             CreatedAt = l.CreatedAt,
             UpdatedAt = l.UpdatedAt
         };
@@ -287,6 +509,8 @@ namespace Afrimine.Services.BL.Implementation
             PublishedAt = l.PublishedAt,
             PrimaryImageUrl = l.Images.FirstOrDefault(x => x.IsPrimary && !x.IsDeleted)?.ImageUrl
                               ?? l.Images.FirstOrDefault(x => !x.IsDeleted)?.ImageUrl,
+            ViewsCount = l.ViewsCount,
+            InquiriesCount = l.InquiriesCount,
             CreatedAt = l.CreatedAt,
             UpdatedAt = l.UpdatedAt,
             Images = l.Images.Where(x => !x.IsDeleted).Select(MapToImageDto).ToList()

@@ -13,7 +13,6 @@ namespace Afrimine.Services.DTOs
         public ListingCategory? Category { get; set; }
     }
 
-    // ── Paginated response wrapper ────────────────────────────────────────────
     public class PagedResultDto<T>
     {
         public IEnumerable<T> Items { get; set; } = Enumerable.Empty<T>();
@@ -23,7 +22,6 @@ namespace Afrimine.Services.DTOs
         public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
     }
 
-    // ── Image DTO ─────────────────────────────────────────────────────────────
     public class ListingImageDto
     {
         public Guid Id { get; set; }
@@ -32,7 +30,6 @@ namespace Afrimine.Services.DTOs
         public bool IsPrimary { get; set; }
     }
 
-    // ── List item (lightweight) ───────────────────────────────────────────────
     public class VendorListingListDto
     {
         public Guid Id { get; set; }
@@ -44,9 +41,10 @@ namespace Afrimine.Services.DTOs
         public string? PrimaryImageUrl { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public int ViewsCount { get; set; }
+        public int InquiriesCount { get; set; }
     }
 
-    // ── Detail (full) ─────────────────────────────────────────────────────────
     public class VendorListingDetailDto : VendorListingListDto
     {
         public string Description { get; set; } = string.Empty;
@@ -57,7 +55,6 @@ namespace Afrimine.Services.DTOs
         public List<ListingImageDto> Images { get; set; } = new();
     }
 
-    // ── Create ────────────────────────────────────────────────────────────────
     public class CreateListingDto
     {
         [Required] public string Title { get; set; } = string.Empty;
@@ -101,7 +98,6 @@ namespace Afrimine.Services.DTOs
         public bool? Publish { get; set; }
     }
 
-    // ── Update ────────────────────────────────────────────────────────────────
     public class UpdateListingDto
     {
         public string? Title { get; set; }
@@ -113,7 +109,6 @@ namespace Afrimine.Services.DTOs
         public ListingCategory? Category { get; set; }
     }
 
-    // ── Upload images ─────────────────────────────────────────────────────────
     public class UploadListingImagesDto
     {
         [Required]

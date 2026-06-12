@@ -48,6 +48,8 @@ namespace Afrimine.Model.Entities
 
         public DateTime? PublishedAt { get; set; } = DateTime.UtcNow;
         public string? AdminReviewNote { get; set; }
+        public int ViewsCount { get; set; } = 0;
+        public int InquiriesCount { get; set; } = 0;
 
         // Navigation
         public ICollection<ListingImage> Images { get; set; } = new List<ListingImage>();
