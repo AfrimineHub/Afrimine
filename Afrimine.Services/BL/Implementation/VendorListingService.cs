@@ -372,26 +372,17 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<VendorDashboardDto>> GetVendorDashboardAsync(string vendorId)
         {
-            // Run all queries in parallel
-            var subscriptionTask = _repository.Subscription.GetActiveByUserIdAsync(vendorId);
-            var revenueTask = GetRevenueSummaryAsync(vendorId);
-            var totalListingsTask = _repository.Listing.CountTotalAsync(vendorId);
-            var activeQuotesTask = _repository.Quote.CountActiveAsync(vendorId);
-            var ongoingOrdersTask = _repository.Order.CountByUserAndStatusAsync(vendorId, OrderStatus.Ongoing);
-            var unreadTask = _repository.Notification.CountUnreadAsync(vendorId);
-            var pendingPayoutTask = _repository.Payout.GetPendingAmountAsync(vendorId);
-            var successfulOrdersTask = _repository.Order.CountSuccessfulOrdersAsync(vendorId);
-            var performanceTask = _repository.Listing.GetPerformanceListingsAsync(vendorId, 1, 5);
-            var notificationsTask = _repository.Notification.GetByUserIdAsync(vendorId, 5);
-
-            await Task.WhenAll(
-                subscriptionTask, totalListingsTask, activeQuotesTask,
-                ongoingOrdersTask, unreadTask, pendingPayoutTask,
-                successfulOrdersTask, performanceTask, notificationsTask);
-
-            var subscription = await subscriptionTask;
-            var revenue = await revenueTask;
+            var subscription = await _repository.Subscription.GetActiveByUserIdAsync(vendorId);
+            var revenue = await GetRevenueSummaryAsync(vendorId);
+            var totalListings = await _repository.Listing.CountTotalAsync(vendorId);
             var listingsUsed = await _repository.Listing.CountByVendorAsync(vendorId);
+            var activeQuotes = await _repository.Quote.CountActiveAsync(vendorId);
+            var ongoingOrders = await _repository.Order.CountByUserAndStatusAsync(vendorId, OrderStatus.Ongoing);
+            var unread = await _repository.Notification.CountUnreadAsync(vendorId);
+            var pendingPayout = await _repository.Payout.GetPendingAmountAsync(vendorId);
+            var successfulOrders = await _repository.Order.CountSuccessfulOrdersAsync(vendorId);
+            var performance = await _repository.Listing.GetPerformanceListingsAsync(vendorId, 1, 5);
+            var notifications = await _repository.Notification.GetByUserIdAsync(vendorId, 5);
 
             SubscriptionSummaryDto? subscriptionDto = null;
             if (subscription is not null)
@@ -413,21 +404,18 @@ namespace Afrimine.Services.BL.Implementation
                 };
             }
 
-            var performance = await performanceTask;
-            var notifications = await notificationsTask;
-
             var dashboard = new VendorDashboardDto
             {
                 Subscription = subscriptionDto,
                 Revenue = revenue.Data,
                 Stats = new VendorDashboardStatsDto
                 {
-                    TotalListingsCount = await totalListingsTask,
-                    ActiveQuotesCount = await activeQuotesTask,
-                    OngoingOrdersCount = await ongoingOrdersTask,
-                    UnreadMessagesCount = await unreadTask,
-                    PendingPayoutAmount = await pendingPayoutTask,
-                    SuccessfulOrdersCount = await successfulOrdersTask
+                    TotalListingsCount = totalListings,
+                    ActiveQuotesCount = activeQuotes,
+                    OngoingOrdersCount = ongoingOrders,
+                    UnreadMessagesCount = unread,
+                    PendingPayoutAmount = pendingPayout,
+                    SuccessfulOrdersCount = successfulOrders
                 },
                 ListingPerformance = performance.Select(l => new ListingPerformanceItemDto
                 {
