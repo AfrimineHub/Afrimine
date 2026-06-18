@@ -9,5 +9,7 @@ namespace Afrimine.Repository
         Task<int> CountSuccessfulOrdersAsync(string userId);
         Task<(decimal Amount, string Currency)> GetPendingPayoutAsync(string userId);
         Task<(IEnumerable<Order> Items, int TotalCount)> GetVendorOrdersAsync(string vendorId, int page, int pageSize, OrderStatus? status);
+        Task<(IEnumerable<Order> Items, int TotalCount)> GetBuyerOrdersAsync(string buyerId, int page, int pageSize, OrderStatus? status);
+        Task<Order?> GetByIdAsync(Guid id);
     }
 }

@@ -8,6 +8,14 @@ namespace Afrimine.Model.Entities
         public User Buyer { get; set; } = null!;
         public Guid ListingId { get; set; }
         public Listing Listing { get; set; } = null!;
-        public OrderStatus Status { get; set; } = OrderStatus.Ongoing;
+        public string VendorId { get; set; } = string.Empty;
+        public User Vendor { get; set; } = null!;
+        public decimal Amount { get; set; }
+        public string Currency { get; set; } = "USD";
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
+        public string? DisputeReason { get; set; }
+        public string? PaymentReference { get; set; }
+        public DateTime? PaidAt { get; set; }
+        public DateTime? DeliveredAt { get; set; }
     }
 }

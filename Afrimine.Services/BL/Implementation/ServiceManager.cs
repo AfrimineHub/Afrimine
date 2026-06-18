@@ -12,6 +12,8 @@ namespace Afrimine.Services.BL.Implementation
         private readonly Lazy<IUserService> _userService;
         private readonly Lazy<IDashboardService> _dashboardService;
         private readonly Lazy<IVendorListingService> _vendorListingService;
+        private readonly Lazy<IBuyerService> _buyerService;
+        private readonly Lazy<IMarketService> _marketService;
 
 
         public ServiceManager(UserManager<User> userManager,
@@ -23,10 +25,14 @@ namespace Afrimine.Services.BL.Implementation
             _dashboardService = new Lazy<IDashboardService>(() => new DashboardService(repositoryManager));
             _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager));
             _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager));
+            _buyerService = new Lazy<IBuyerService>(() => new BuyerService(repositoryManager));
+            _marketService = new Lazy<IMarketService>(() => new MarketService(repositoryManager));
         }
 
         public IUserService User => _userService.Value;
         public IDashboardService Dashboard => _dashboardService.Value;
         public IVendorListingService VendorListing => _vendorListingService.Value;
+        public IBuyerService Buyer => _buyerService.Value;
+        public IMarketService Market => _marketService.Value;
     }
 }

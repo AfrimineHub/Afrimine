@@ -17,5 +17,8 @@ namespace Afrimine.Repository
         Task<int> CountActiveQuotesAsync(string vendorId);
         Task<IEnumerable<Listing>> GetPerformanceListingsAsync(string vendorId, int page, int pageSize);
         Task<int> CountTotalAsync(string vendorId);
+        Task<(IEnumerable<Listing> Items, int TotalCount)> SearchMarketplaceAsync(string? q, string? location, string? mineral,ListingCategory? listingType, bool verifiedOnly,int page, int pageSize);
+
+        Task<IEnumerable<string>> GetCategoriesAsync();
     }
 }

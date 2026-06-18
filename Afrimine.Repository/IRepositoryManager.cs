@@ -19,5 +19,9 @@ namespace Afrimine.Repository
         IRevenueRepository Revenue { get; }
         IQuoteRepository Quote { get; }
         IPayoutRepository Payout { get; }
+        IRfqRepository Rfq { get; }
+        IMarketTrendRepository MarketTrend { get; }
+        IInvestmentInsightRepository InvestmentInsight { get; }
+        IInquiryRepository Inquiry { get; }
     }
 }
