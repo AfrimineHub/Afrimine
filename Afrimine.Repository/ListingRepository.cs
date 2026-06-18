@@ -70,5 +70,31 @@ namespace Afrimine.Repository
         public async Task<int> CountTotalAsync(string vendorId) =>
             await FindByCondition(x => x.OwnerId == vendorId && !x.IsDeleted, false)
                 .CountAsync();
+
+        public async Task<(IEnumerable<Listing> Items, int TotalCount)> SearchMarketplaceAsync(string? q, string? location, string? mineral, ListingCategory? listingType, bool verifiedOnly,int page, int pageSize)
+        {
+            IQueryable<Listing> query = FindByCondition(
+                x => !x.IsDeleted && x.Status == ListingStatus.Active, false)
+                .Include(x => x.Images)
+                .Include(x => x.Owner);
+
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(x => x.Title.Contains(q) || x.Description.Contains(q) || x.Location.Contains(q));
+            if (!string.IsNullOrWhiteSpace(location))
+                query = query.Where(x => x.Location.Contains(location) || x.Country.Contains(location));
+            if (!string.IsNullOrWhiteSpace(mineral))
+                query = query.Where(x => x.MineralType != null && x.MineralType.Contains(mineral));
+            if (listingType.HasValue)
+                query = query.Where(x => x.CategoryType == listingType.Value);
+
+            var total = await query.CountAsync();
+            var items = await query.OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (items, total);
+        }
+
+        public async Task<IEnumerable<string>> GetCategoriesAsync() =>
+            await FindByCondition(x => !x.IsDeleted && x.Status == ListingStatus.Active, false)
+                .Select(x => x.CategoryType.ToString()).Distinct().ToListAsync();
     }
 }

@@ -21,6 +21,11 @@ namespace Afrimine.Migrations
         public DbSet<Revenue> Revenues { get; set; }
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<Payout> Payouts { get; set; }
+        // DbSets
+        public DbSet<Rfq> Rfqs { get; set; }
+        public DbSet<MarketTrend> MarketTrends { get; set; }
+        public DbSet<InvestmentInsight> InvestmentInsights { get; set; }
+        public DbSet<Inquiry> Inquiries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -74,6 +79,26 @@ namespace Afrimine.Migrations
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Payout>()
+                .HasOne(x => x.Vendor).WithMany()
+                .HasForeignKey(x => x.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Order>()
+                .HasOne(x => x.Vendor).WithMany()
+                .HasForeignKey(x => x.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Rfq>()
+                .HasOne(x => x.Buyer).WithMany()
+                .HasForeignKey(x => x.BuyerId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Inquiry>()
+                .HasOne(x => x.Buyer).WithMany()
+                .HasForeignKey(x => x.BuyerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Inquiry>()
                 .HasOne(x => x.Vendor).WithMany()
                 .HasForeignKey(x => x.VendorId)
                 .OnDelete(DeleteBehavior.Restrict);

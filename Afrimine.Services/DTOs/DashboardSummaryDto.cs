@@ -10,6 +10,7 @@
         public decimal PendingPayoutAmount { get; set; }
         public string PendingPayoutCurrency { get; set; } = "USD";
         public int SuccessfulOrdersCount { get; set; }
+        public int OpenRfqsCount { get; set; }
     }
 
     public class ListingCardDto
