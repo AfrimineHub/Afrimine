@@ -13,7 +13,7 @@ namespace Afrimine.Migrations.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260605051428_supplierrolemigration")]
-    partial class supplierrolemigration
+    partial class Supplierrolemigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

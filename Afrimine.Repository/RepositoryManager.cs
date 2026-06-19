@@ -20,6 +20,13 @@ namespace Afrimine.Repository
         private readonly Lazy<IMarketTrendRepository> _marketTrendRepository;
         private readonly Lazy<IInvestmentInsightRepository> _investmentInsightRepository;
         private readonly Lazy<IInquiryRepository> _inquiryRepository;
+        private readonly Lazy<IConversationRepository> _conversationRepository;
+        private readonly Lazy<IMessageRepository> _messageRepository;
+        private readonly Lazy<IEscrowRepository> _escrowRepository;
+        private readonly Lazy<IDisputeRepository> _disputeRepository;
+        private readonly Lazy<ISubscriptionPlanRepository> _subscriptionPlanRepository;
+        private readonly Lazy<ISubscriptionInvoiceRepository> _subscriptionInvoiceRepository;
+        private readonly Lazy<IRfqQuoteRepository> _rfqQuoteRepository;
 
         public RepositoryManager(AppDbContext appDbContext)
         {
@@ -39,6 +46,13 @@ namespace Afrimine.Repository
             _marketTrendRepository = new Lazy<IMarketTrendRepository>(() => new MarketTrendRepository(appDbContext));
             _investmentInsightRepository = new Lazy<IInvestmentInsightRepository>(() => new InvestmentInsightRepository(appDbContext));
             _inquiryRepository = new Lazy<IInquiryRepository>(() => new InquiryRepository(appDbContext));
+            _conversationRepository = new Lazy<IConversationRepository>(() => new ConversationRepository(appDbContext));
+            _messageRepository = new Lazy<IMessageRepository>(() => new MessageRepository(appDbContext));
+            _escrowRepository = new Lazy<IEscrowRepository>(() => new EscrowRepository(appDbContext));
+            _disputeRepository = new Lazy<IDisputeRepository>(() => new DisputeRepository(appDbContext));
+            _subscriptionPlanRepository = new Lazy<ISubscriptionPlanRepository>(() => new SubscriptionPlanRepository(appDbContext));
+            _subscriptionInvoiceRepository = new Lazy<ISubscriptionInvoiceRepository>(() => new SubscriptionInvoiceRepository(appDbContext));
+            _rfqQuoteRepository = new Lazy<IRfqQuoteRepository>(() => new RfqQuoteRepository(appDbContext));
         }
 
         public IOtpRepository Otp => _otpRepository.Value;
@@ -59,5 +73,12 @@ namespace Afrimine.Repository
         public IMarketTrendRepository MarketTrend => _marketTrendRepository.Value;
         public IInvestmentInsightRepository InvestmentInsight => _investmentInsightRepository.Value;
         public IInquiryRepository Inquiry => _inquiryRepository.Value;
+        public IConversationRepository Conversation => _conversationRepository.Value;
+        public IMessageRepository MessageRepo => _messageRepository.Value;
+        public IEscrowRepository Escrow => _escrowRepository.Value;
+        public IDisputeRepository Dispute => _disputeRepository.Value;
+        public ISubscriptionPlanRepository SubscriptionPlan => _subscriptionPlanRepository.Value;
+        public ISubscriptionInvoiceRepository SubscriptionInvoice => _subscriptionInvoiceRepository.Value;
+        public IRfqQuoteRepository RfqQuote => _rfqQuoteRepository.Value;
     }
 }

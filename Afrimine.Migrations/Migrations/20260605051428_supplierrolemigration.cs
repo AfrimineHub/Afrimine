@@ -5,7 +5,7 @@
 namespace Afrimine.Migrations.Migrations
 {
     /// <inheritdoc />
-    public partial class supplierrolemigration : Migration
+    public partial class Supplierrolemigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

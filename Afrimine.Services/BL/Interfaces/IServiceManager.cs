@@ -7,5 +7,8 @@
         IVendorListingService VendorListing { get; }
         IBuyerService Buyer { get; }
         IMarketService Market { get; }
+        IMessagingService Messaging { get; }
+        ISubscriptionService Subscription { get; }
+        IEscrowService Escrow { get; }
     }
 }
