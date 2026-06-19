@@ -23,5 +23,12 @@ namespace Afrimine.Repository
         IMarketTrendRepository MarketTrend { get; }
         IInvestmentInsightRepository InvestmentInsight { get; }
         IInquiryRepository Inquiry { get; }
+        IConversationRepository Conversation { get; }
+        IMessageRepository MessageRepo { get; }
+        IEscrowRepository Escrow { get; }
+        IDisputeRepository Dispute { get; }
+        ISubscriptionPlanRepository SubscriptionPlan { get; }
+        ISubscriptionInvoiceRepository SubscriptionInvoice { get; }
+        IRfqQuoteRepository RfqQuote { get; }
     }
 }

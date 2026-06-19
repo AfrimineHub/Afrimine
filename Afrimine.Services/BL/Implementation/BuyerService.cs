@@ -174,15 +174,24 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("Payment recorded. Order is now in escrow.");
         }
 
-        public async Task<ApiResponse<PagedResultDto<RfqDto>>> GetBuyerRfqsAsync(
-            string buyerId, RfqQueryDto query)
+        public async Task<ApiResponse<PagedResultDto<RfqDto>>> GetBuyerRfqsAsync(string buyerId, RfqQueryDto query)
         {
-            var (items, total) = await _repository.Rfq.GetBuyerRfqsAsync(
-                buyerId, query.Page, query.PageSize);
+            var (items, total) = await _repository.Rfq.GetBuyerRfqsAsync(buyerId, query.Page, query.PageSize);
+
+            var rfqList = items.ToList();
+
+            var dtos = new List<RfqDto>();
+            foreach (var rfq in rfqList)
+            {
+                var responseCount = await _repository.RfqQuote.CountByRfqIdAsync(rfq.Id);
+                var dto = MapToRfqDto(rfq);
+                dto.ResponseCount = responseCount;
+                dtos.Add(dto);
+            }
 
             return ApiResponse<PagedResultDto<RfqDto>>.Ok(new PagedResultDto<RfqDto>
             {
-                Items = items.Select(MapToRfqDto),
+                Items = dtos,
                 TotalCount = total,
                 Page = query.Page,
                 PageSize = query.PageSize

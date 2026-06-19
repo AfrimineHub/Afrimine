@@ -125,6 +125,7 @@ namespace Afrimine.Services.DTOs
         public string Country { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string BuyerName { get; set; } = string.Empty;
+        public int ResponseCount { get; set; }
         public DateTime ExpiresAt { get; set; }
         public DateTime CreatedAt { get; set; }
     }

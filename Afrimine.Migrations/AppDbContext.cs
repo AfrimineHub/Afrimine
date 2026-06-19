@@ -21,11 +21,17 @@ namespace Afrimine.Migrations
         public DbSet<Revenue> Revenues { get; set; }
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<Payout> Payouts { get; set; }
-        // DbSets
         public DbSet<Rfq> Rfqs { get; set; }
         public DbSet<MarketTrend> MarketTrends { get; set; }
         public DbSet<InvestmentInsight> InvestmentInsights { get; set; }
         public DbSet<Inquiry> Inquiries { get; set; }
+        public DbSet<Conversation> Conversations { get; set; }
+        public DbSet<Message> Messages { get; set; }
+        public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+        public DbSet<SubscriptionInvoice> SubscriptionInvoices { get; set; }
+        public DbSet<Escrow> Escrows { get; set; }
+        public DbSet<Dispute> Disputes { get; set; }
+        public DbSet<RfqQuote> RfqQuotes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -102,6 +108,42 @@ namespace Afrimine.Migrations
                 .HasOne(x => x.Vendor).WithMany()
                 .HasForeignKey(x => x.VendorId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Conversation>()
+                .HasOne(x => x.Buyer).WithMany()
+                .HasForeignKey(x => x.BuyerId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Conversation>()
+                .HasOne(x => x.Vendor).WithMany()
+                .HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Message>()
+                .HasOne(x => x.Sender).WithMany()
+                .HasForeignKey(x => x.SenderId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Escrow>()
+                .HasOne(x => x.Order).WithMany()
+                .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Dispute>()
+                .HasOne(x => x.Order).WithMany()
+                .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Dispute>()
+                .HasOne(x => x.RaisedBy).WithMany()
+                .HasForeignKey(x => x.RaisedById).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SubscriptionInvoice>()
+                .HasOne(x => x.User).WithMany()
+                .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RfqQuote>()
+                .HasOne(x => x.Rfq).WithMany()
+                .HasForeignKey(x => x.RfqId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RfqQuote>()
+                .HasOne(x => x.Vendor).WithMany()
+                .HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
 
             base.OnModelCreating(builder);
         }
