@@ -28,14 +28,16 @@ namespace Afrimine.Services.BL.Implementation
         private readonly SignInManager<User> _signInManager;
         private readonly AppConfig _settings;
         private readonly IRepositoryManager _repositoryManager;
+        private readonly ICloudinaryService _cloudinary;
 
         public UserService(UserManager<User> userManager,
-                        SignInManager<User> signInManager, IOptions<AppConfig> options, IRepositoryManager repositoryManager)
+                        SignInManager<User> signInManager, IOptions<AppConfig> options, IRepositoryManager repositoryManager, ICloudinaryService cloudinary)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _settings = options.Value;
             _repositoryManager = repositoryManager;
+            _cloudinary = cloudinary;
         }
 
         public async Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request)
@@ -362,10 +364,18 @@ namespace Afrimine.Services.BL.Implementation
             if (profile.OnboardingStep < 2)
                 return ApiResponse<string>.Fail("Please complete business profile setup first.", StatusCodes.Status400BadRequest);
 
-            var fileUrl = await UploadFileAsync(request.File);
+            // Delete old document from Cloudinary if one exists
+            if (!string.IsNullOrWhiteSpace(profile.DocumentPublicId))
+                await _cloudinary.DeleteAsync(profile.DocumentPublicId);
+
+            // Upload to Cloudinary
+            var result = await _cloudinary.UploadDocumentAsync(request.File, $"afrimine/kyc/{userId}");
+            if (!result.Success)
+                return ApiResponse<string>.Fail($"Document upload failed: {result.Error}", StatusCodes.Status400BadRequest);
 
             profile.DocumentType = request.DocumentType;
-            profile.DocumentUrl = fileUrl;
+            profile.DocumentUrl = result.Url;
+            profile.DocumentPublicId = result.PublicId;
             profile.DocumentFileName = request.File.FileName;
             profile.OnboardingStep = 3;
             profile.IsComplete = true;
@@ -375,6 +385,7 @@ namespace Afrimine.Services.BL.Implementation
 
             return ApiResponse<string>.Ok("KYC document uploaded successfully.", 200);
         }
+
 
         public async Task<ApiResponse<VendorProfileResponseDto>> GetVendorProfileAsync(string userId)
         {

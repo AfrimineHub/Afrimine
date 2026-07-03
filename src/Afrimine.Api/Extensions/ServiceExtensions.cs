@@ -35,7 +35,9 @@ namespace Afrimine.Api.Extensions
                 .ConfigureServiceAndRepo()
                 .ConfigureHangfire(configuration)
                 .AddScoped<INotificationService, NotificationService>()
-                .AddScoped<IRepositoryManager, RepositoryManager>();
+                .AddScoped<IRepositoryManager, RepositoryManager>()
+                .Configure<CloudinaryConfig>(configuration.GetSection("Cloudinary"))
+                .AddScoped<ICloudinaryService, CloudinaryService>();
 
             services.AddCors(options =>
             {

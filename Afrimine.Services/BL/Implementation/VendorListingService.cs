@@ -11,13 +11,15 @@ namespace Afrimine.Services.BL.Implementation
     public class VendorListingService : IVendorListingService
     {
         private readonly IRepositoryManager _repository;
+        private readonly ICloudinaryService _cloudinary;
 
         // Max 10 images per listing
         private const int MaxImages = 10;
 
-        public VendorListingService(IRepositoryManager repository)
+        public VendorListingService(IRepositoryManager repository, ICloudinaryService cloudinary)
         {
             _repository = repository;
+            _cloudinary = cloudinary;
         }
 
         public async Task<ApiResponse<PagedResultDto<VendorListingListDto>>> GetListingsAsync(
@@ -186,28 +188,6 @@ namespace Afrimine.Services.BL.Implementation
             await _repository.SaveAsync();
 
             return ApiResponse<List<ListingImageDto>>.Ok(newImages.Select(MapToImageDto).ToList());
-        }
-
-        public async Task<ApiResponse<string>> DeleteImageAsync(string vendorId, Guid listingId, Guid imageId)
-        {
-            var listing = await _repository.Listing.GetByIdAsync(listingId);
-
-            if (listing is null)
-                return ApiResponse<string>.Fail("Listing not found.", 404);
-
-            if (listing.OwnerId != vendorId)
-                return ApiResponse<string>.Fail("Access denied.", 403);
-
-            var image = await _repository.ListingImage.GetByIdAndListingAsync(imageId, listingId);
-            if (image is null)
-                return ApiResponse<string>.Fail("Image not found.", 404);
-
-            image.IsDeleted = true;
-            image.DeletedBy = vendorId;
-            _repository.ListingImage.Update(image);
-            await _repository.SaveAsync();
-
-            return ApiResponse<string>.Ok("Image removed.");
         }
 
         public async Task<ApiResponse<string>> PublishListingAsync(string vendorId, Guid listingId)
@@ -440,30 +420,29 @@ namespace Afrimine.Services.BL.Implementation
 
         // ── Private helpers ───────────────────────────────────────────────────
 
-        private static async Task<List<ListingImage>> SaveImagesAsync(Guid listingId, List<IFormFile> files)
+        private async Task<List<ListingImage>> SaveImagesAsync(Guid listingId, List<IFormFile> files)
         {
-            // TODO: Replace this with your actual cloud storage upload (e.g. Azure Blob / S3 / Cloudinary)
-            // For now it stores the file name as the URL placeholder
             var images = new List<ListingImage>();
 
             foreach (var file in files)
             {
                 if (file.Length == 0) continue;
 
-                var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                var result = await _cloudinary.UploadImageAsync(file, $"afrimine/listings/{listingId}");
 
-                // ↓ Swap this line with your actual upload call and use the returned URL
-                var imageUrl = $"/uploads/listings/{listingId}/{fileName}";
+                if (!result.Success)
+                    throw new InvalidOperationException($"Image upload failed: {result.Error}");
 
                 images.Add(new ListingImage
                 {
                     ListingId = listingId,
-                    ImageUrl = imageUrl,
-                    FileName = fileName
+                    ImageUrl = result.Url,
+                    FileName = file.FileName,
+                    PublicId = result.PublicId
                 });
             }
 
-            return await Task.FromResult(images);
+            return images;
         }
 
         private static VendorListingListDto MapToListDto(Listing l) => new()
@@ -511,5 +490,26 @@ namespace Afrimine.Services.BL.Implementation
             FileName = img.FileName,
             IsPrimary = img.IsPrimary
         };
+
+        public async Task<ApiResponse<string>> DeleteImageAsync(string vendorId, Guid listingId, Guid imageId)
+        {
+            var listing = await _repository.Listing.GetByIdAsync(listingId);
+            if (listing is null) return ApiResponse<string>.Fail("Listing not found.", 404);
+            if (listing.OwnerId != vendorId) return ApiResponse<string>.Fail("Access denied.", 403);
+
+            var image = await _repository.ListingImage.GetByIdAndListingAsync(imageId, listingId);
+            if (image is null) return ApiResponse<string>.Fail("Image not found.", 404);
+
+            // Delete from Cloudinary
+            if (!string.IsNullOrWhiteSpace(image.PublicId))
+                await _cloudinary.DeleteAsync(image.PublicId);
+
+            image.IsDeleted = true;
+            image.DeletedBy = vendorId;
+            _repository.ListingImage.Update(image);
+            await _repository.SaveAsync();
+
+            return ApiResponse<string>.Ok("Image removed.");
+        }
     }
 }
