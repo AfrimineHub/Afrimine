@@ -17,22 +17,25 @@ namespace Afrimine.Services.BL.Implementation
         private readonly Lazy<IMessagingService> _messagingService;
         private readonly Lazy<ISubscriptionService> _subscriptionService;
         private readonly Lazy<IEscrowService> _escrowService;
+        private readonly ICloudinaryService _cloudinary;
 
 
         public ServiceManager(UserManager<User> userManager,
                             SignInManager<User> signInManager,
                             IOptions<AppConfig> options,
-                            IRepositoryManager repositoryManager)
+                            IRepositoryManager repositoryManager,
+                            ICloudinaryService cloudinary)
         {
-            _userService = new Lazy<IUserService>(() => new UserService(userManager, signInManager, options, repositoryManager));
+            _userService = new Lazy<IUserService>(() => new UserService(userManager, signInManager, options, repositoryManager, cloudinary));
             _dashboardService = new Lazy<IDashboardService>(() => new DashboardService(repositoryManager));
-            _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager));
-            _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager));
+            _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager, cloudinary));
+            _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager, cloudinary));
             _buyerService = new Lazy<IBuyerService>(() => new BuyerService(repositoryManager));
             _marketService = new Lazy<IMarketService>(() => new MarketService(repositoryManager));
             _messagingService = new Lazy<IMessagingService>(() => new MessagingService(repositoryManager));
             _subscriptionService = new Lazy<ISubscriptionService>(() => new SubscriptionService(repositoryManager));
             _escrowService = new Lazy<IEscrowService>(() => new EscrowService(repositoryManager));
+            _cloudinary = cloudinary;
         }
 
         public IUserService User => _userService.Value;
@@ -43,5 +46,7 @@ namespace Afrimine.Services.BL.Implementation
         public IMessagingService Messaging => _messagingService.Value;
         public ISubscriptionService Subscription => _subscriptionService.Value;
         public IEscrowService Escrow => _escrowService.Value;
+
+
     }
 }
