@@ -12,6 +12,8 @@ namespace Afrimine.Services.DTOs
         public int UnreadCount { get; set; }
         public Guid? ListingId { get; set; }
         public string? ListingTitle { get; set; }
+        public Guid? RfqId { get; set; }
+        public string? RfqTitle { get; set; }
     }
 
     public class MessageDto
@@ -42,6 +44,8 @@ namespace Afrimine.Services.DTOs
         public Guid? ListingId { get; set; }
         public Guid? OrderId { get; set; }
         [Required] public string InitialMessage { get; set; } = string.Empty;
+        public string? BuyerId { get; set; }
+        public Guid? RfqId { get; set; }
     }
 
     public class SendMessageDto

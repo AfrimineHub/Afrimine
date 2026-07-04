@@ -11,5 +11,7 @@
         public Guid? OrderId { get; set; }
         public Order? Order { get; set; }
         public ICollection<Message> Messages { get; set; } = new List<Message>();
+        public Guid? RfqId { get; set; }
+        public Rfq? Rfq { get; set; }
     }
 }
