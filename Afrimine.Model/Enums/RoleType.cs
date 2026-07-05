@@ -9,7 +9,7 @@ namespace Afrimine.Model.Enums
         Investor,
         Supplier,
         Support,
-        SuperAdmin
+        SuperAdmin,
     }
 
     public enum AccountStatus
@@ -20,6 +20,8 @@ namespace Afrimine.Model.Enums
         Active,
         [Description("Suspended")]
         Suspended,
+        [Description("Banned")]
+        Banned,
         [Description("Deactivated")]
         Deactivated
     }

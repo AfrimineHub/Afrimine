@@ -6,5 +6,7 @@ namespace Afrimine.Repository
     {
         Task Create(VendorProfile profile);
         Task<VendorProfile?> GetByUserId(string userId);
+        Task<IEnumerable<VendorProfile>> GetByUserIdsAsync(IEnumerable<string> userIds);
+        void Update(VendorProfile profile);
     }
 }

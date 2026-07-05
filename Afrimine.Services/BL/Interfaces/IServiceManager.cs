@@ -10,5 +10,6 @@
         IMessagingService Messaging { get; }
         ISubscriptionService Subscription { get; }
         IEscrowService Escrow { get; }
+        IAdminService Admin { get; }
     }
 }

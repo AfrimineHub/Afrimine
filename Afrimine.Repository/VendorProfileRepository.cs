@@ -13,5 +13,9 @@ namespace Afrimine.Repository
                 .FirstOrDefaultAsync();
         public new async Task Create(VendorProfile profile) => await base.Create(profile);
         public new void Update(VendorProfile profile) => base.Update(profile);
+
+        public async Task<IEnumerable<VendorProfile>> GetByUserIdsAsync(IEnumerable<string> userIds) =>
+            await FindByCondition(x => userIds.Contains(x.UserId), false)
+                .Include(x => x.User).ToListAsync();
     }
 }

@@ -37,7 +37,8 @@ namespace Afrimine.Api.Extensions
                 .AddScoped<INotificationService, NotificationService>()
                 .AddScoped<IRepositoryManager, RepositoryManager>()
                 .Configure<CloudinaryConfig>(configuration.GetSection("Cloudinary"))
-                .AddScoped<ICloudinaryService, CloudinaryService>();
+                .AddScoped<ICloudinaryService, CloudinaryService>()
+                .AddScoped<IAdminRepository, AdminRepository>();
 
             services.AddCors(options =>
             {
