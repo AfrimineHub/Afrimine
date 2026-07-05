@@ -24,6 +24,7 @@ namespace Afrimine.Services.BL.Implementation
                 var participant = isVendor ? c.Buyer : c.Vendor;
                 var lastMsg = c.Messages.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
                 var unread = c.Messages.Count(m => m.SenderId != userId && !m.IsRead);
+
                 return new ConversationListItemDto
                 {
                     Id = c.Id,
@@ -33,12 +34,79 @@ namespace Afrimine.Services.BL.Implementation
                     LastMessageAt = lastMsg?.CreatedAt,
                     UnreadCount = unread,
                     ListingId = c.ListingId,
-                    ListingTitle = c.Listing?.Title
+                    ListingTitle = c.Listing?.Title,
+                    RfqId = c.RfqId,
+                    RfqTitle = c.Rfq?.Title
                 };
             });
+
             return ApiResponse<IEnumerable<ConversationListItemDto>>.Ok(result);
         }
 
+        public async Task<ApiResponse<ConversationListItemDto>> StartConversationAsync(string initiatorId, StartConversationDto request)
+        {
+            var isBuyerInitiating = !string.IsNullOrWhiteSpace(request.VendorId);
+
+            var buyerId = isBuyerInitiating ? initiatorId : request.BuyerId;
+            var vendorId = isBuyerInitiating ? request.VendorId : initiatorId;
+
+            if (string.IsNullOrWhiteSpace(buyerId) || string.IsNullOrWhiteSpace(vendorId))
+                return ApiResponse<ConversationListItemDto>.Fail("Recipient must be specified.", 400);
+
+            if (buyerId == vendorId) 
+                return ApiResponse<ConversationListItemDto>.Fail("Cannot start a conversation with yourself.", 400);
+
+            Conversation conv;
+
+            // Reuse existing thread only when tied to same listing or same RFQ
+            // Fresh conversation (no listing, no rfq) always creates new
+            if (request.ListingId.HasValue || request.RfqId.HasValue)
+            {
+                var existing = await _repository.Conversation.GetExistingAsync(
+                    buyerId, vendorId, request.ListingId, request.RfqId);
+
+                conv = existing ?? await CreateConversationAsync(buyerId, vendorId, request);
+            }
+            else
+            {
+                // No listing, no RFQ — always new conversation
+                conv = await CreateConversationAsync(buyerId, vendorId, request);
+            }
+
+            await SendMessageAsync(initiatorId, conv.Id, new SendMessageDto
+            {
+                Content = request.InitialMessage
+            });
+
+            var participantId = isBuyerInitiating ? vendorId! : buyerId!;
+
+            return ApiResponse<ConversationListItemDto>.Ok(new ConversationListItemDto
+            {
+                Id = conv.Id,
+                ParticipantId = participantId,
+                ParticipantName = string.Empty,
+                LastMessage = request.InitialMessage,
+                LastMessageAt = DateTime.UtcNow,
+                UnreadCount = 0,
+                ListingId = request.ListingId,
+                RfqId = request.RfqId
+            });
+        }
+
+        private async Task<Conversation> CreateConversationAsync(string buyerId, string vendorId, StartConversationDto request)
+        {
+            var conv = new Conversation
+            {
+                BuyerId = buyerId,
+                VendorId = vendorId,
+                ListingId = request.ListingId,
+                RfqId = request.RfqId,
+                OrderId = request.OrderId
+            };
+            await _repository.Conversation.Create(conv);
+            await _repository.SaveAsync();
+            return conv;
+        }
         public async Task<ApiResponse<IEnumerable<MessageDto>>> GetMessagesAsync(string userId, Guid conversationId)
         {
             var conv = await _repository.Conversation.GetByIdWithMessagesAsync(conversationId);
@@ -105,43 +173,6 @@ namespace Afrimine.Services.BL.Implementation
                 Category = conv.Listing?.CategoryType.ToString(),
                 OrderId = conv.OrderId,
                 OrderStatus = conv.Order?.Status.ToString()
-            });
-        }
-
-        public async Task<ApiResponse<ConversationListItemDto>> StartConversationAsync(string buyerId, StartConversationDto request)
-        {
-            var existing = await _repository.Conversation.GetExistingAsync(
-                buyerId, request.VendorId, request.ListingId);
-
-            Conversation conv;
-            if (existing is not null)
-            {
-                conv = existing;
-            }
-            else
-            {
-                conv = new Conversation
-                {
-                    BuyerId = buyerId,
-                    VendorId = request.VendorId,
-                    ListingId = request.ListingId,
-                    OrderId = request.OrderId
-                };
-                await _repository.Conversation.Create(conv);
-                await _repository.SaveAsync();
-            }
-
-            await SendMessageAsync(buyerId, conv.Id, new SendMessageDto { Content = request.InitialMessage });
-
-            return ApiResponse<ConversationListItemDto>.Ok(new ConversationListItemDto
-            {
-                Id = conv.Id,
-                ParticipantId = request.VendorId,
-                ParticipantName = string.Empty,
-                LastMessage = request.InitialMessage,
-                LastMessageAt = DateTime.UtcNow,
-                UnreadCount = 0,
-                ListingId = request.ListingId
             });
         }
 

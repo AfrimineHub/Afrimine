@@ -16,9 +16,17 @@ namespace Afrimine.Model.Entities
         public string? DocumentUrl { get; set; }
         public string? DocumentFileName { get; set; }
         public int OnboardingStep { get; set; } = 1;
+        public string? DocumentPublicId { get; set; }
+        public string? DocumentIdNumber { get; set; }
+        public string? DateOfBirth { get; set; }
+        public string? ProfilePhotoUrl { get; set; }
+        public long? DocumentFileSizeBytes { get; set; }
+        public KycStatus KycStatus { get; set; } = KycStatus.NotStarted;
+        public string? KycRejectionReason { get; set; }
+        public string? BankName { get; set; }
+        public string? BankAccountNumber { get; set; }
         public bool IsComplete { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
-        public string? DocumentPublicId { get; set; }
     }
 }

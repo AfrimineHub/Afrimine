@@ -117,6 +117,11 @@ namespace Afrimine.Migrations
                 .HasOne(x => x.Vendor).WithMany()
                 .HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<Conversation>()
+                .HasOne(x => x.Rfq).WithMany()
+                .HasForeignKey(x => x.RfqId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             builder.Entity<Message>()
                 .HasOne(x => x.Sender).WithMany()
                 .HasForeignKey(x => x.SenderId).OnDelete(DeleteBehavior.Restrict);

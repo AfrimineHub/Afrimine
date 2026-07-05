@@ -8,6 +8,8 @@
         Active,
         Inactive,
         Archived,
-        Sold
+        Sold,
+        Rejected,
+        Flagged
     }
 }

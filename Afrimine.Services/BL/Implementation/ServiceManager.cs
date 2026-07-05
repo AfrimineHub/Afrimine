@@ -18,13 +18,15 @@ namespace Afrimine.Services.BL.Implementation
         private readonly Lazy<ISubscriptionService> _subscriptionService;
         private readonly Lazy<IEscrowService> _escrowService;
         private readonly ICloudinaryService _cloudinary;
+        private readonly Lazy<IAdminService> _adminService;
 
 
         public ServiceManager(UserManager<User> userManager,
                             SignInManager<User> signInManager,
                             IOptions<AppConfig> options,
                             IRepositoryManager repositoryManager,
-                            ICloudinaryService cloudinary)
+                            ICloudinaryService cloudinary,
+                            IAdminRepository adminRepository)
         {
             _userService = new Lazy<IUserService>(() => new UserService(userManager, signInManager, options, repositoryManager, cloudinary));
             _dashboardService = new Lazy<IDashboardService>(() => new DashboardService(repositoryManager));
@@ -36,6 +38,7 @@ namespace Afrimine.Services.BL.Implementation
             _subscriptionService = new Lazy<ISubscriptionService>(() => new SubscriptionService(repositoryManager));
             _escrowService = new Lazy<IEscrowService>(() => new EscrowService(repositoryManager));
             _cloudinary = cloudinary;
+            _adminService = new Lazy<IAdminService>(() => new AdminService(repositoryManager,adminRepository, userManager));
         }
 
         public IUserService User => _userService.Value;
@@ -46,7 +49,6 @@ namespace Afrimine.Services.BL.Implementation
         public IMessagingService Messaging => _messagingService.Value;
         public ISubscriptionService Subscription => _subscriptionService.Value;
         public IEscrowService Escrow => _escrowService.Value;
-
-
+        public IAdminService Admin => _adminService.Value;
     }
 }

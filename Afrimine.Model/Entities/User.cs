@@ -12,6 +12,8 @@ namespace Afrimine.Model.Entities
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiry { get; set; }
         public RoleType Type { get; set; }
+        public string? SuspendedReason { get; set; }
+        public string? BannedReason { get; set; }
     }
 }
                                                       

@@ -15,6 +15,7 @@ namespace Afrimine.Repository
                 .Include(x => x.Buyer)
                 .Include(x => x.Vendor)
                 .Include(x => x.Listing)
+                .Include(x => x.Rfq)
                 .Include(x => x.Messages.OrderByDescending(m => m.CreatedAt).Take(1))
                 .OrderByDescending(x => x.UpdatedAt)
                 .ToListAsync();
@@ -29,10 +30,12 @@ namespace Afrimine.Repository
                     .ThenInclude(m => m.Sender)
                 .FirstOrDefaultAsync();
 
-        public async Task<Conversation?> GetExistingAsync(string buyerId, string vendorId, Guid? listingId) =>
-            await FindByCondition(x => x.BuyerId == buyerId && x.VendorId == vendorId
-                && x.ListingId == listingId && !x.IsDeleted, true)
-                .FirstOrDefaultAsync();
+        public async Task<Conversation?> GetExistingAsync(string buyerId, string vendorId, Guid? listingId, Guid? rfqId) => 
+            await FindByCondition(x => x.BuyerId == buyerId && x.VendorId == vendorId && 
+            x.ListingId == listingId &&
+            x.RfqId == rfqId &&
+            !x.IsDeleted, true)
+            .FirstOrDefaultAsync();
 
         public async Task<int> CountUnreadAsync(string userId) =>
             await AppDbContext.Set<Message>()
