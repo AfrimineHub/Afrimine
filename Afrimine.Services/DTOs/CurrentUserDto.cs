@@ -18,14 +18,13 @@ namespace Afrimine.Services.DTOs
         public const string Vendor = nameof(RoleType.Vendor);
         public const string Buyer = nameof(RoleType.Buyer);
         public const string Investor = nameof(RoleType.Investor);
-        public const string Supplier = nameof(RoleType.Supplier);
         public const string Support = nameof(RoleType.Support);
         public const string SuperAdmin = nameof(RoleType.SuperAdmin);
 
         // Useful combinations
         public const string AdminOnly = $"{SuperAdmin}";
         public const string AdminAndSupport = $"{SuperAdmin},{Support}";
-        public const string AllUsers = $"{Vendor},{Buyer},{Investor},{Support},{SuperAdmin},{Supplier}";
+        public const string AllUsers = $"{Vendor},{Buyer},{Investor},{Support},{SuperAdmin}";
         public const string MarketParticipants = $"{Vendor},{Buyer},{Investor}";
     }
 }
