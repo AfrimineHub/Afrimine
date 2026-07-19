@@ -78,7 +78,7 @@ namespace Afrimine.Services.BL.Implementation
                     Type = "warning",
                     Title = "KYC Pending Review",
                     Description = $"{k.User?.FullName ?? "Vendor"} submitted KYC documents",
-                    Time = TimeAgo(k.UpdatedAt ?? k.CreatedAt),
+                    Time = TimeAgo(k.CreatedAt),
                     ActionText = "Review",
                     ActionUrl = $"/admin/kyc/{k.Id}"
                 });
@@ -475,7 +475,7 @@ namespace Afrimine.Services.BL.Implementation
                     Phone = p.User?.PhoneNumber,
                     DocumentType = p.DocumentType?.ToString(),
                     Country = p.Country,
-                    SubmittedAt = (p.UpdatedAt ?? p.CreatedAt).ToString("O"),
+                    SubmittedAt = (p.CreatedAt).ToString("O"),
                     Status = p.KycStatus.ToString().ToLower()
                 }),
                 TotalCount = total,
@@ -501,7 +501,7 @@ namespace Afrimine.Services.BL.Implementation
                 DocumentType = p.DocumentType?.ToString(),
                 DocumentIdNumber = p.DocumentIdNumber,
                 Country = p.Country,
-                SubmittedAt = (p.UpdatedAt ?? p.CreatedAt).ToString("O"),
+                SubmittedAt = (p.CreatedAt).ToString("O"),
                 ProfilePhotoUrl = p.ProfilePhotoUrl,
                 DocumentFileName = p.DocumentFileName,
                 DocumentFileSizeBytes = p.DocumentFileSizeBytes,

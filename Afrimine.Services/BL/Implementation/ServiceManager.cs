@@ -19,6 +19,7 @@ namespace Afrimine.Services.BL.Implementation
         private readonly Lazy<IEscrowService> _escrowService;
         private readonly ICloudinaryService _cloudinary;
         private readonly Lazy<IAdminService> _adminService;
+        private readonly Lazy<IEquipmentService> _equipmentService;
 
 
         public ServiceManager(UserManager<User> userManager,
@@ -26,11 +27,12 @@ namespace Afrimine.Services.BL.Implementation
                             IOptions<AppConfig> options,
                             IRepositoryManager repositoryManager,
                             ICloudinaryService cloudinary,
-                            IAdminRepository adminRepository)
+                            IAdminRepository adminRepository,
+                            IEquipmentRepository equipmentRepository,
+                            IPayscrowService payscrowService)
         {
             _userService = new Lazy<IUserService>(() => new UserService(userManager, signInManager, options, repositoryManager, cloudinary));
             _dashboardService = new Lazy<IDashboardService>(() => new DashboardService(repositoryManager));
-            _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager, cloudinary));
             _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager, cloudinary));
             _buyerService = new Lazy<IBuyerService>(() => new BuyerService(repositoryManager));
             _marketService = new Lazy<IMarketService>(() => new MarketService(repositoryManager));
@@ -39,6 +41,7 @@ namespace Afrimine.Services.BL.Implementation
             _escrowService = new Lazy<IEscrowService>(() => new EscrowService(repositoryManager));
             _cloudinary = cloudinary;
             _adminService = new Lazy<IAdminService>(() => new AdminService(repositoryManager,adminRepository, userManager));
+            _equipmentService = new Lazy<IEquipmentService>(() => new EquipmentService(repositoryManager, equipmentRepository, payscrowService, cloudinary, userManager, options));
         }
 
         public IUserService User => _userService.Value;
@@ -50,5 +53,6 @@ namespace Afrimine.Services.BL.Implementation
         public ISubscriptionService Subscription => _subscriptionService.Value;
         public IEscrowService Escrow => _escrowService.Value;
         public IAdminService Admin => _adminService.Value;
+        public IEquipmentService Equipment => _equipmentService.Value;
     }
 }

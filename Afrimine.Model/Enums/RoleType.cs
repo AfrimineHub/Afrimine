@@ -8,7 +8,7 @@ namespace Afrimine.Model.Enums
         Buyer,
         Investor,
         Support,
-        SuperAdmin,
+        SuperAdmin
     }
 
     public enum AccountStatus
