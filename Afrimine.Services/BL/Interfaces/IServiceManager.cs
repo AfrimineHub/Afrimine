@@ -11,5 +11,6 @@
         ISubscriptionService Subscription { get; }
         IEscrowService Escrow { get; }
         IAdminService Admin { get; }
+        IEquipmentService Equipment { get; }
     }
 }

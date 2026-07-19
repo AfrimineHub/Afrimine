@@ -40,6 +40,10 @@ namespace Afrimine.Api.Extensions
                 .AddScoped<ICloudinaryService, CloudinaryService>()
                 .AddScoped<IAdminRepository, AdminRepository>();
 
+            services.AddScoped<IEquipmentRepository, EquipmentRepository>();
+            services.AddScoped<IPayscrowService, PayscrowService>();
+            services.AddHttpClient<IPayscrowService, PayscrowService>();
+
             services.AddCors(options =>
             {
                 options.AddPolicy("Frontend", policy =>

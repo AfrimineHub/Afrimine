@@ -32,6 +32,16 @@ namespace Afrimine.Migrations
         public DbSet<Escrow> Escrows { get; set; }
         public DbSet<Dispute> Disputes { get; set; }
         public DbSet<RfqQuote> RfqQuotes { get; set; }
+        public DbSet<SupplierProfile> SupplierProfiles { get; set; }
+        public DbSet<Asset> Assets { get; set; }
+        public DbSet<Operator> Operators { get; set; }
+        public DbSet<Guarantor> Guarantors { get; set; }
+        public DbSet<AssetOperator> AssetOperators { get; set; }
+        public DbSet<Booking> Bookings { get; set; }
+        public DbSet<DailyCheck> DailyChecks { get; set; }
+        public DbSet<BookingDispute> BookingDisputes { get; set; }
+        public DbSet<SupplierWallet> SupplierWallets { get; set; }
+        public DbSet<WalletTransaction> WalletTransactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -149,6 +159,49 @@ namespace Afrimine.Migrations
             builder.Entity<RfqQuote>()
                 .HasOne(x => x.Vendor).WithMany()
                 .HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<SupplierProfile>()
+    .HasOne(x => x.User).WithMany()
+    .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Asset>()
+                .HasOne(x => x.Supplier).WithMany()
+                .HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Operator>()
+                .HasOne(x => x.Supplier).WithMany()
+                .HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AssetOperator>()
+                .HasOne(x => x.Asset).WithMany(x => x.Operators)
+                .HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AssetOperator>()
+                .HasOne(x => x.Operator).WithMany(x => x.AssignedAssets)
+                .HasForeignKey(x => x.OperatorId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Booking>()
+                .HasOne(x => x.Asset).WithMany(x => x.Bookings)
+                .HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Booking>()
+                .HasOne(x => x.Miner).WithMany()
+                .HasForeignKey(x => x.MinerId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Booking>()
+                .HasOne(x => x.Supplier).WithMany()
+                .HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BookingDispute>()
+                .HasOne(x => x.RaisedBy).WithMany()
+                .HasForeignKey(x => x.RaisedById).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SupplierWallet>()
+                .HasOne(x => x.Supplier).WithMany()
+                .HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Guarantor>()
+                .HasOne(x => x.Operator).WithMany(x => x.Guarantors)
+                .HasForeignKey(x => x.OperatorId).OnDelete(DeleteBehavior.Cascade);
 
             base.OnModelCreating(builder);
         }

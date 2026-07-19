@@ -2,9 +2,8 @@
 
 namespace Afrimine.Model.Entities
 {
-    public class VendorProfile
+    public class VendorProfile : BaseEntity
     {
-        public Guid Id { get; set; }
         public string UserId { get; set; } = string.Empty;
         public User User { get; set; } = null!;
         public BusinessType BusinessType { get; set; }
@@ -15,6 +14,7 @@ namespace Afrimine.Model.Entities
         public DocumentType? DocumentType { get; set; }
         public string? DocumentUrl { get; set; }
         public string? DocumentFileName { get; set; }
+        public VendorType VendorType { get; set; } = VendorType.EquipmentSupplier;
         public int OnboardingStep { get; set; } = 1;
         public string? DocumentPublicId { get; set; }
         public string? DocumentIdNumber { get; set; }
@@ -26,7 +26,5 @@ namespace Afrimine.Model.Entities
         public string? BankName { get; set; }
         public string? BankAccountNumber { get; set; }
         public bool IsComplete { get; set; } = false;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? UpdatedAt { get; set; }
     }
 }

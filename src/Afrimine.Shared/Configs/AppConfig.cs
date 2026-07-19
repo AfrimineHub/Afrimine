@@ -10,6 +10,10 @@
         public string ResendSender { get; set; } = default!;
         public string ResendEndpoint { get; set; } = default!;
         public string PlatformName { get; set; } = default!;
+        public string PayscrowApiKey { get; set; } = string.Empty;
+        public string PayscrowBaseUrl { get; set; } = "https://api.payscrow.dev";
+        public string PayscrowReturnUrl { get; set; } = string.Empty;
+        public string PayscrowWebhookUrl { get; set; } = string.Empty;
     }
 
     public class CloudinaryConfig

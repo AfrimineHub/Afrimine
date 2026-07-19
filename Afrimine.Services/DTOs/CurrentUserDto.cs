@@ -26,5 +26,6 @@ namespace Afrimine.Services.DTOs
         public const string AdminAndSupport = $"{SuperAdmin},{Support}";
         public const string AllUsers = $"{Vendor},{Buyer},{Investor},{Support},{SuperAdmin}";
         public const string MarketParticipants = $"{Vendor},{Buyer},{Investor}";
+        public const string VendorAndBuyer = $"{Vendor},{Buyer}";
     }
 }
