@@ -30,7 +30,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpGet("suppliers/me")]
         public async Task<IActionResult> GetProfile()
         {
@@ -40,7 +40,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPatch("suppliers/profile")]
         public async Task<IActionResult> UpdateProfile([FromBody] SupplierProfileUpdateDto request)
         {
@@ -50,7 +50,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPut("suppliers/location")]
         public async Task<IActionResult> UpdateLocation([FromBody] SupplierLocationDto request)
         {
@@ -60,7 +60,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("suppliers/documents")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadDocument([FromForm] SupplierDocumentUploadDto request)
@@ -71,7 +71,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("suppliers/submit")]
         public async Task<IActionResult> Submit()
         {
@@ -81,7 +81,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpGet("suppliers/status")]
         public async Task<IActionResult> GetStatus()
         {
@@ -93,7 +93,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── Assets ─────────────────────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("assets")]
         public async Task<IActionResult> CreateAsset([FromBody] CreateAssetDto request)
         {
@@ -103,7 +103,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpGet("assets")]
         public async Task<IActionResult> GetAssets()
         {
@@ -113,7 +113,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("assets/{assetId:guid}")]
         public async Task<IActionResult> GetAsset(Guid assetId)
         {
@@ -123,7 +123,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPut("assets/{assetId:guid}")]
         public async Task<IActionResult> UpdateAsset(Guid assetId, [FromBody] UpdateAssetDto request)
         {
@@ -133,7 +133,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpDelete("assets/{assetId:guid}")]
         public async Task<IActionResult> DeleteAsset(Guid assetId)
         {
@@ -143,7 +143,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("assets/{assetId:guid}/photos")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadAssetPhotos(Guid assetId, [FromForm] AssetPhotoUploadDto request)
@@ -164,7 +164,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("assets/{assetId:guid}/operators")]
         public async Task<IActionResult> AssignOperator(Guid assetId, [FromQuery] Guid operatorId)
         {
@@ -176,7 +176,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── Operators ──────────────────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("operators")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> CreateOperator([FromForm] CreateOperatorDto request)
@@ -187,7 +187,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpGet("operators")]
         public async Task<IActionResult> GetOperators()
         {
@@ -197,7 +197,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPut("operators/{operatorId:guid}")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateOperator(Guid operatorId, [FromForm] CreateOperatorDto request)
@@ -208,7 +208,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("operators/{operatorId:guid}/guarantors")]
         public async Task<IActionResult> AddGuarantor(Guid operatorId, [FromBody] CreateGuarantorDto request)
         {
@@ -218,7 +218,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("operators/{operatorId:guid}/vetting")]
         public async Task<IActionResult> SubmitVetting(Guid operatorId, [FromBody] VettingSubmitDto request)
         {
@@ -228,7 +228,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("operators/{operatorId:guid}/vetting-status")]
         public async Task<IActionResult> GetVettingStatus(Guid operatorId)
         {
@@ -238,7 +238,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── Bookings ───────────────────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.Buyer)]
         [HttpPost("bookings")]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto request)
         {
@@ -248,7 +248,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings")]
         public async Task<IActionResult> GetBookings([FromQuery] string? status)
         {
@@ -258,7 +258,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}")]
         public async Task<IActionResult> GetBooking(Guid bookingId)
         {
@@ -268,7 +268,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPut("bookings/{bookingId:guid}/approve")]
         public async Task<IActionResult> ApproveBooking(Guid bookingId)
         {
@@ -278,7 +278,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPut("bookings/{bookingId:guid}/decline")]
         public async Task<IActionResult> DeclineBooking(Guid bookingId, [FromBody] DeclineBookingDto request)
         {
@@ -288,7 +288,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/contract")]
         public IActionResult GetContract(Guid bookingId)
         {
@@ -298,7 +298,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── Logistics ──────────────────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("bookings/{bookingId:guid}/dispatch")]
         public async Task<IActionResult> Dispatch(Guid bookingId)
         {
@@ -308,7 +308,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/logistics-status")]
         public async Task<IActionResult> GetLogisticsStatus(Guid bookingId)
         {
@@ -316,7 +316,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/tracking")]
         public async Task<IActionResult> GetTracking(Guid bookingId)
         {
@@ -324,7 +324,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("bookings/{bookingId:guid}/insurance")]
         public async Task<IActionResult> TriggerInsurance(Guid bookingId, [FromBody] TriggerInsuranceDto request)
         {
@@ -334,7 +334,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/insurance-certificate")]
         public async Task<IActionResult> GetInsuranceCertificate(Guid bookingId)
         {
@@ -344,7 +344,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── Milestones & Sign-off ──────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpPost("bookings/{bookingId:guid}/site-arrival")]
         public async Task<IActionResult> SiteArrival(Guid bookingId)
         {
@@ -354,7 +354,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("bookings/{bookingId:guid}/daily-check")]
         public async Task<IActionResult> DailyCheck(Guid bookingId, [FromBody] DailyCheckDto request)
         {
@@ -364,7 +364,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/milestones")]
         public async Task<IActionResult> GetMilestones(Guid bookingId)
         {
@@ -372,7 +372,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpPost("bookings/{bookingId:guid}/return-clearance")]
         public async Task<IActionResult> ReturnClearance(Guid bookingId)
         {
@@ -382,7 +382,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/payment-breakdown")]
         public async Task<IActionResult> GetPaymentBreakdown(Guid bookingId)
         {
@@ -392,7 +392,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── Disputes ───────────────────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpPost("bookings/{bookingId:guid}/disputes")]
         public async Task<IActionResult> RaiseDispute(Guid bookingId, [FromBody] BookingDisputeDto request)
         {
@@ -402,7 +402,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/disputes")]
         public async Task<IActionResult> GetBookingDisputes(Guid bookingId)
         {
@@ -410,7 +410,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpGet("disputes")]
         public async Task<IActionResult> GetAllDisputes()
         {
@@ -422,7 +422,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── Wallet ─────────────────────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpGet("wallet/balance")]
         public async Task<IActionResult> GetWalletBalance()
         {
@@ -432,7 +432,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("wallet/withdrawal")]
         public async Task<IActionResult> RequestWithdrawal([FromBody] WithdrawalRequestDto request)
         {
@@ -442,7 +442,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpGet("wallet/transactions")]
         public async Task<IActionResult> GetWalletTransactions()
         {
@@ -454,7 +454,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── Dashboard ──────────────────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpGet("dashboard/supplier/stats")]
         public async Task<IActionResult> GetDashboardStats()
         {
@@ -466,7 +466,7 @@ namespace Afrimine.Api.Controllers.V1
 
         // ── PayScrow ───────────────────────────────────────────────────────────
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpPost("escrow/apply-code")]
         public async Task<IActionResult> ApplyEscrowCode([FromBody] EscrowCodeApplyDto request)
         {
@@ -476,7 +476,7 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        [Authorize]
+        [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("escrow/status/{transactionNumber}")]
         public async Task<IActionResult> GetPayscrowStatus(string transactionNumber)
         {
