@@ -22,7 +22,20 @@ namespace Afrimine.Api.Controllers.V1
             _service = service;
         }
 
-        /// <summary>Get dashboard summary — saved listings count, unread messages, ongoing orders</summary>
+        /// <summary>Get dashboard summary stats</summary>
+        /// <remarks>
+        /// Returns counts for the top stats bar on the dashboard.
+        /// Works for both Vendors and Buyers — returns relevant counts per role.
+        ///
+        /// **Response includes:**
+        /// - `savedListingsCount` — bookmarked listings
+        /// - `unreadMessagesCount` — unread conversation messages
+        /// - `ongoingOrdersCount` — active orders/bookings
+        /// - `openRfqsCount` — open RFQs (buyers only)
+        /// - `totalListingsCount` — total listings published (vendors only)
+        /// - `pendingPayoutAmount` — funds pending withdrawal (vendors only)
+        /// </remarks>
+        /// 
         [HttpGet("summary")]
         [ProducesResponseType(typeof(ApiResponse<DashboardSummaryDto>), 200)]
         public async Task<IActionResult> GetSummary()
@@ -33,7 +46,11 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get recommended listings for the logged-in user</summary>
+        /// <summary>Get personalized listing recommendations</summary>
+        /// <remarks>
+        /// Returns up to 6 active listings from other vendors, ordered by most recent.
+        /// Used for the "Recommended For You" section on the dashboard.
+        /// </remarks>
         [HttpGet("recommended")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ListingCardDto>>), 200)]
         public async Task<IActionResult> GetRecommended()
@@ -44,7 +61,8 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get latest notifications</summary>
+        /// <summary>Get latest notifications for the authenticated user</summary>
+        /// <remarks>Returns the 10 most recent notifications ordered by date descending.</remarks>
         [HttpGet("notifications")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<NotificationDto>>), 200)]
         public async Task<IActionResult> GetNotifications()
@@ -56,6 +74,7 @@ namespace Afrimine.Api.Controllers.V1
         }
 
         /// <summary>Mark all notifications as read</summary>
+        /// <remarks>Sets all unread notifications to read. This drives the unread count back to 0.</remarks>
         [HttpPatch("notifications/read")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> MarkNotificationsRead()
@@ -66,7 +85,11 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get saved listings (paginated)</summary>
+        /// <summary>Get user's saved/bookmarked listings (paginated)</summary>
+        /// <remarks>
+        /// Returns listings the user has bookmarked using `POST /dashboard/saved-listings`.
+        /// Paginated — use `page` and `pageSize` query params.
+        /// </remarks>
         [HttpGet("saved-listings")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<SavedListingDto>>), 200)]
         public async Task<IActionResult> GetSavedListings([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
@@ -77,7 +100,8 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Save a listing</summary>
+        /// <summary>Bookmark/save a listing</summary>
+        /// <remarks>Adds a listing to the user's saved list. Returns 409 if already saved.</remarks>
         [HttpPost("saved-listings")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> SaveListing([FromBody] SaveListingRequestDto request)
@@ -99,7 +123,14 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get subscription details for the authenticated user</summary>
+        /// <summary>Get subscription plan details and usage</summary>
+        /// <remarks>
+        /// Returns the vendor's current subscription plan with listings usage.
+        /// - `listingsUsed` — how many listings published
+        /// - `listingsRemaining` — how many more can be published
+        /// - `usagePercent` — percentage of limit used
+        /// - `canUpgrade` — true when usage is at or above 80%
+        /// </remarks>
         [HttpGet("subscription")]
         [ProducesResponseType(typeof(ApiResponse<SubscriptionSummaryDto>), 200)]
         public async Task<IActionResult> GetSubscription()

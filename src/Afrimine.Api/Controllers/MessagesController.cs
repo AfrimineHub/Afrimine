@@ -21,7 +21,12 @@ namespace Afrimine.Api.Controllers
             _service = service;
         }
 
-        /// <summary>Get conversation list (sidebar)</summary>
+        /// <summary>Get all conversations (chat sidebar)</summary>
+        /// <remarks>
+        /// Returns all conversations for the authenticated user ordered by most recent.
+        /// Each item shows last message preview and unread count.
+        /// Conversations are created automatically when a listing inquiry is sent.
+        /// </remarks>
         [HttpGet("conversations")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ConversationListItemDto>>), 200)]
         public async Task<IActionResult> GetConversations()
@@ -32,7 +37,18 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+
         /// <summary>Start a new conversation</summary>
+        /// <remarks>
+        /// Creates a new conversation thread. If a conversation already exists for the same buyer+vendor+listing, the existing thread is reused.
+        ///
+        /// **For Buyers:** Set `vendorId` — leave `buyerId` empty
+        /// **For Vendors:** Set `buyerId` — leave `vendorId` empty (creates a fresh thread)
+        ///
+        /// **Rules:**
+        /// - If `listingId` or `rfqId` is provided → reuses existing thread for that listing/RFQ
+        /// - If neither is provided → always creates a new thread (vendor outreach)
+        /// </remarks>
         [HttpPost("conversations")]
         [ProducesResponseType(typeof(ApiResponse<ConversationListItemDto>), 201)]
         public async Task<IActionResult> StartConversation([FromBody] StartConversationDto request)
@@ -43,7 +59,12 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get message thread for a conversation</summary>
+        /// <summary>Get all messages in a conversation (chat window)</summary>
+        /// <remarks>
+        /// Returns messages ordered chronologically (oldest first).
+        /// Only participants (buyer or vendor) can access a conversation.
+        /// </remarks>
+
         [HttpGet("conversations/{id:guid}/messages")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<MessageDto>>), 200)]
         public async Task<IActionResult> GetMessages(Guid id)
@@ -55,6 +76,7 @@ namespace Afrimine.Api.Controllers
         }
 
         /// <summary>Send a message in a conversation</summary>
+        /// <remarks>Only participants can send messages in a conversation.</remarks> 
         [HttpPost("conversations/{id:guid}/messages")]
         [ProducesResponseType(typeof(ApiResponse<MessageDto>), 201)]
         public async Task<IActionResult> SendMessage(Guid id, [FromBody] SendMessageDto request)
@@ -65,7 +87,11 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get linked listing/order context for a conversation</summary>
+        /// <summary>Get linked listing or order context for a conversation</summary>
+        /// <remarks>
+        /// Returns the listing snippet or order info linked to this conversation.
+        /// Used for the OrderContextCard / listing snippet shown in the chat sidebar.
+        /// </remarks>
         [HttpGet("conversations/{id:guid}/context")]
         [ProducesResponseType(typeof(ApiResponse<ConversationContextDto>), 200)]
         public async Task<IActionResult> GetContext(Guid id)
@@ -76,7 +102,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Mark conversation as read — drives unreadMessagesCount</summary>
+        /// <summary>Mark all messages in a conversation as read</summary>
+        /// <remarks>Resets the unread count for this conversation. Call this when the user opens the chat window.</remarks>
         [HttpPatch("conversations/{id:guid}/read")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> MarkRead(Guid id)

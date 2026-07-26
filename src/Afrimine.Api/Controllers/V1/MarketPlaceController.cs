@@ -22,6 +22,17 @@ namespace Afrimine.Api.Controllers.V1
         }
 
         /// <summary>Search and browse marketplace listings (public)</summary>
+        /// <remarks>
+        /// Main marketplace search. No auth required — anyone can browse.
+        ///
+        /// **Query params:**
+        /// - `q` — search text (matches title, description, location)
+        /// - `location` — filter by city, state, or country
+        /// - `mineral` — filter by mineral type (e.g. "Gold", "Copper")
+        /// - `listingType` — 0=MiningSite, 1=MineralSupply, 2=Equipment, 3=Investment
+        /// - `verifiedOnly` — true to show only KYC-verified vendors
+        /// - `page`, `pageSize` — pagination
+        /// </remarks>
         [AllowAnonymous]
         [HttpGet("listings")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<MarketplaceListingDto>>), 200)]
@@ -31,7 +42,11 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get single listing detail (public)</summary>
+        /// <summary>Get full details of a single listing (public)</summary>
+        /// <remarks>
+        /// Returns complete listing info including all images, contact info, and specs.
+        /// Also increments `viewsCount` for non-owners.
+        /// </remarks>
         [AllowAnonymous]
         [HttpGet("listings/{id:guid}")]
         [ProducesResponseType(typeof(ApiResponse<MarketplaceListingDetailDto>), 200)]
@@ -42,7 +57,8 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get available listing categories (public)</summary>
+        /// <summary>Get all active listing categories (public)</summary>
+        /// <remarks>Returns distinct category names that currently have active listings.</remarks>
         [AllowAnonymous]
         [HttpGet("listings/categories")]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<string>>), 200)]
@@ -52,7 +68,12 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Inquire on a listing / contact seller</summary>
+        /// <summary>Send an inquiry to a listing seller (Buyer only)</summary>
+        /// <remarks>
+        /// Sends a message/inquiry to the vendor about a specific listing.
+        /// Also increments the listing's `inquiriesCount`.
+        /// A conversation thread is created automatically — check `GET /messages/conversations` to reply.
+        /// </remarks>
         [Authorize(Roles = Roles.Buyer)]
         [HttpPost("listings/{id:guid}/inquire")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
@@ -84,7 +105,17 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Browse open RFQs — vendors view buyer requests</summary>
+        /// <summary>Browse open RFQs — vendors can see what buyers are looking for</summary>
+        /// <remarks>
+        /// Lists all open buyer RFQs. Vendors can browse and submit quotes.
+        /// Use `Status` filter to narrow down (defaults to `Open`).
+        ///
+        /// **RfqStatus values:**
+        /// - `1` = Open — accepting vendor quotes
+        /// - `2` = Closed — no longer accepting quotes
+        /// - `3` = Awarded — buyer accepted a quote
+        /// - `4` = Cancelled
+        /// </remarks>
         [AllowAnonymous]
         [HttpGet("rfqs")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<RfqDto>>), 200)]

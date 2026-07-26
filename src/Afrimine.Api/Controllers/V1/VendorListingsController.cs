@@ -22,7 +22,24 @@ namespace Afrimine.Api.Controllers.V1
             _service = service;
         }
 
-        /// <summary>Get paginated listings for the authenticated vendor</summary>
+        /// <summary>Get all listings for the authenticated vendor (paginated)</summary>
+        /// <remarks>
+        /// Returns the vendor's own listings with filtering options.
+        ///
+        /// **Status filter values:**
+        /// - `Draft` — not yet submitted
+        /// - `PendingReview` — submitted, awaiting admin approval
+        /// - `Active` — approved and live on marketplace
+        /// - `Rejected` — rejected by admin (see adminReviewNote)
+        /// - `Flagged` — flagged by admin for review
+        /// - `Archived` — soft-deleted
+        ///
+        /// **CategoryType filter values:**
+        /// - `0` = MiningSite
+        /// - `1` = MineralSupply
+        /// - `2` = Equipment
+        /// - `3` = Investment
+        /// </remarks>
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<VendorListingListDto>>), 200)]
         public async Task<IActionResult> GetListings([FromQuery] VendorListingQueryDto query)
@@ -34,7 +51,11 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get single listing detail</summary>
+        /// <summary>Get a single listing with full details</summary>
+        /// <remarks>
+        /// Also increments `viewsCount` when called by non-owners.
+        /// Returns 403 if the listing belongs to a different vendor.
+        /// </remarks>
         [HttpGet("{id:guid}")]
         [ProducesResponseType(typeof(ApiResponse<VendorListingDetailDto>), 200)]
         public async Task<IActionResult> GetListing(Guid id)
@@ -46,7 +67,17 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Create a new listing — JSON or multipart when images included</summary>
+        /// <summary>Create a new listing (saved as Draft)</summary>
+        /// <remarks>
+        /// Creates a listing in `Draft` status. Use `POST /vendor/listings/{id}/publish` to submit for admin review.
+        /// Supports both JSON and multipart/form-data (use multipart when including images).
+        ///
+        /// **CategoryType values:**
+        /// - `0` = MiningSite — mining site for sale/lease
+        /// - `1` = MineralSupply — minerals for sale
+        /// - `2` = Equipment — equipment for sale/rent
+        /// - `3` = Investment — investment opportunity
+        /// </remarks>
         [HttpPost]
         [ProducesResponseType(typeof(ApiResponse<VendorListingDetailDto>), 201)]
         [Consumes("multipart/form-data", "application/json")]
@@ -60,6 +91,10 @@ namespace Afrimine.Api.Controllers.V1
         }
 
         /// <summary>Update listing fields</summary>
+        /// <remarks>
+        /// Partial update — only send fields you want to change.
+        /// Cannot edit listings that are `PendingReview` — withdraw first.
+        /// </remarks>
         [HttpPut("{id:guid}")]
         [ProducesResponseType(typeof(ApiResponse<VendorListingDetailDto>), 200)]
         public async Task<IActionResult> UpdateListing(Guid id, [FromBody] UpdateListingDto request)
@@ -71,7 +106,8 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Soft-delete / archive a listing</summary>
+        /// <summary>Archive/soft-delete a listing</summary>
+        /// <remarks>Listing is archived (not permanently deleted). Status changes to `Archived`.</remarks>
         [HttpDelete("{id:guid}")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> DeleteListing(Guid id)
@@ -95,7 +131,12 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Remove an image from a listing</summary>
+        /// <summary>Upload additional images to a listing (max 10 total)</summary>
+        /// <remarks>
+        /// Use `multipart/form-data` — key name: `images` (multiple files allowed).
+        /// First image without a primary is automatically set as primary.
+        /// **Accepted formats:** JPG, PNG, WEBP — **Max size:** 10MB each
+        /// </remarks>
         [HttpDelete("{id:guid}/images/{imageId:guid}")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> DeleteImage(Guid id, Guid imageId)
@@ -107,7 +148,11 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Submit a draft listing for admin review</summary>
+        /// <summary>Submit listing for admin review</summary>
+        /// <remarks>
+        /// Changes status from `Draft` to `PendingReview`. Admin will approve or reject.
+        /// You will be notified of the decision. Cannot resubmit while already `PendingReview`.
+        /// </remarks>
         [HttpPost("{id:guid}/publish")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> PublishListing(Guid id)
@@ -119,7 +164,8 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get revenue summary for the authenticated vendor</summary>
+        /// <summary>Get vendor revenue summary with month-over-month changes</summary>
+
         [HttpGet("/api/v{version:apiVersion}/vendor/revenue/summary")]
         [ProducesResponseType(typeof(ApiResponse<RevenueSummaryDto>), 200)]
         public async Task<IActionResult> GetRevenueSummary()
@@ -131,7 +177,10 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get vendor quotes</summary>
+        /// <summary>Get vendor quotes (paginated)</summary>
+        /// <remarks>
+        /// **status filter:** `pending`, `active`, `accepted`, `rejected`, `expired`
+        /// </remarks>
         [HttpGet("/api/v{version:apiVersion}/vendor/quotes")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<VendorQuoteDto>>), 200)]
         public async Task<IActionResult> GetQuotes([FromQuery] VendorQuoteQueryDto query)
@@ -143,7 +192,8 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get vendor payout summary</summary>
+        /// <summary>Get vendor payout summary — pending and total paid</summary>
+
         [HttpGet("/api/v{version:apiVersion}/vendor/payout/summary")]
         [ProducesResponseType(typeof(ApiResponse<PayoutSummaryDto>), 200)]
         public async Task<IActionResult> GetPayoutSummary()
@@ -155,7 +205,10 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get vendor orders</summary>
+        /// <summary>Get all vendor orders (paginated)</summary>
+        /// <remarks>
+        /// **status filter:** `pending`, `ongoing`, `paid`, `delivered`, `completed`, `disputed`, `cancelled`
+        /// </remarks>
         [HttpGet("/api/v{version:apiVersion}/vendor/orders")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<VendorOrderDto>>), 200)]
         public async Task<IActionResult> GetOrders([FromQuery] VendorOrderQueryDto query)
@@ -167,7 +220,11 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get listing performance metrics</summary>
+        /// <summary>Get listing performance metrics (views, saves, inquiries)</summary>
+        /// <remarks>
+        /// Returns performance data for all vendor listings, ordered by view count (highest first).
+        /// Use this to power the listing performance table on the dashboard.
+        /// </remarks>
         [HttpGet("/api/v{version:apiVersion}/vendor/dashboard/listings/performance")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<ListingPerformanceItemDto>>), 200)]
         public async Task<IActionResult> GetListingsPerformance([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
@@ -179,7 +236,11 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get full vendor dashboard — aggregated in one call</summary>
+        /// <summary>Get vendor's full dashboard in a single call</summary>
+        /// <remarks>
+        /// Aggregates subscription, revenue, stats, listing performance, and recent notifications.
+        /// Use this to power the entire vendor dashboard with one API call instead of multiple.
+        /// </remarks>
         [HttpGet("/api/v{version:apiVersion}/vendor/dashboard")]
         [ProducesResponseType(typeof(ApiResponse<VendorDashboardDto>), 200)]
         public async Task<IActionResult> GetVendorDashboard()

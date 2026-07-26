@@ -20,7 +20,16 @@ namespace Afrimine.Api.Controllers
             _service = service;
         }
 
-        /// <summary>Admin dashboard</summary>
+        /// <summary>Get full admin dashboard — stats, alerts, activity, ongoing transactions</summary>
+        /// <remarks>
+        /// Single endpoint that powers the entire admin dashboard.
+        ///
+        /// **Stats included:** Total users, active users, KYC verified, vendors, total revenue, pending payments, open disputes, pending listings
+        ///
+        /// **Priority alerts:** Open disputes + pending KYC submissions needing urgent attention
+        ///
+        /// **Ongoing transactions:** Orders currently in `Ongoing` or `Paid` status
+        /// </remarks>
         [HttpGet("dashboard")]
         [ProducesResponseType(typeof(ApiResponse<AdminDashboardDto>), 200)]
         public async Task<IActionResult> GetDashboard()
@@ -29,7 +38,12 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        // ── Users ──────────────────────────────────────────────────────────────
+        /// <summary>List all platform users with filtering</summary>
+        /// <remarks>
+        /// **role filter:** `vendor`, `buyer`, `investor`, `support`, `superadmin`
+        /// **kycStatus filter:** `notstarted`, `pending`, `verified`, `rejected`
+        /// **accountStatus filter:** `active`, `suspended`, `banned`, `pending`
+        /// </remarks>
 
         [HttpGet("users")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AdminUserListItemDto>>), 200)]
@@ -39,6 +53,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Get user count stats for dashboard cards</summary>
+
         [HttpGet("users/stats")]
         [ProducesResponseType(typeof(ApiResponse<AdminUserStatsDto>), 200)]
         public async Task<IActionResult> GetUserStats()
@@ -47,6 +63,9 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Suspend a user account</summary>
+        /// <remarks>User loses access but account is preserved. Provide a reason for the suspension.</remarks>
+        
         [HttpPost("users/{userId}/suspend")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> SuspendUser(string userId, [FromBody] AdminUserActionDto request)
@@ -55,6 +74,10 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+
+        /// <summary>Permanently ban a user account</summary>
+        /// <remarks>User is banned from the platform. Provide a reason.</remarks>
+        
         [HttpPost("users/{userId}/ban")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> BanUser(string userId, [FromBody] AdminUserActionDto request)
@@ -62,6 +85,8 @@ namespace Afrimine.Api.Controllers
             var response = await _service.Admin.BanUserAsync(userId, request);
             return StatusCode(response.StatusCode, response);
         }
+
+        /// <summary>Reactivate a suspended or banned user</summary>
 
         [HttpPost("users/{userId}/reactivate")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
@@ -71,8 +96,12 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        // ── Listings ───────────────────────────────────────────────────────────
-
+        /// <summary>List listings pending moderation</summary>
+        /// <remarks>
+        /// **status filter values:** `pendingreview`, `active`, `rejected`, `flagged`, `archived`
+        /// Default shows all statuses if no filter provided.
+        /// </remarks>
+        
         [HttpGet("listings")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AdminListingListItemDto>>), 200)]
         public async Task<IActionResult> GetListings([FromQuery] AdminListingQueryDto query)
@@ -81,6 +110,7 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Get listing counts by status for moderation tab badges</summary>
         [HttpGet("listings/counts")]
         [ProducesResponseType(typeof(ApiResponse<AdminListingCountsDto>), 200)]
         public async Task<IActionResult> GetListingCounts()
@@ -89,6 +119,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Approve a listing — makes it live on the marketplace</summary>
+        /// <remarks>Status changes from `PendingReview` to `Active`. Vendor is notified.</remarks>
         [HttpPost("listings/{id:guid}/approve")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> ApproveListing(Guid id)
@@ -97,6 +129,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Reject a listing with reason</summary>
+        /// <remarks>Status changes to `Rejected`. Vendor sees the rejection reason and can edit and resubmit.</remarks>
         [HttpPost("listings/{id:guid}/reject")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> RejectListing(Guid id, [FromBody] AdminListingActionDto request)
@@ -105,6 +139,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Flag a listing for further review</summary>
+        /// <remarks>Status changes to `Flagged`. Listing remains visible but flagged for admin attention.</remarks>
         [HttpPost("listings/{id:guid}/flag")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> FlagListing(Guid id, [FromBody] AdminListingActionDto request)
@@ -113,6 +149,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Archive/permanently remove a listing</summary>
+        /// <remarks>Soft deletes the listing — it is archived and no longer visible on the marketplace.</remarks>
         [HttpDelete("listings/{id:guid}")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> DeleteListing(Guid id)
@@ -131,8 +169,11 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        // ── Orders ─────────────────────────────────────────────────────────────
-
+        /// <summary>Get all orders with filtering</summary>
+        /// <remarks>
+        /// **status filter:** `pending`, `ongoing`, `paid`, `delivered`, `completed`, `disputed`, `frozen`, `cancelled`
+        /// Use `q` to search by buyer name, vendor name, or listing title.
+        /// </remarks>
         [HttpGet("orders")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AdminOrderListItemDto>>), 200)]
         public async Task<IActionResult> GetOrders([FromQuery] AdminOrderQueryDto query)
@@ -141,6 +182,7 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Get order count summary for status tabs</summary>
         [HttpGet("orders/summary")]
         [ProducesResponseType(typeof(ApiResponse<AdminOrderSummaryDto>), 200)]
         public async Task<IActionResult> GetOrderSummary([FromQuery] string? q)
@@ -149,6 +191,11 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Get full order detail with timeline and documents</summary>
+        /// <remarks>
+        /// Timeline shows the progression: Order Placed → Payment → In Escrow → Delivered → Completed
+        /// Each step has a status of `completed`, `current`, or `pending`.
+        /// </remarks>
         [HttpGet("orders/{orderId:guid}")]
         [ProducesResponseType(typeof(ApiResponse<AdminOrderDetailDto>), 200)]
         public async Task<IActionResult> GetOrderDetail(Guid orderId)
@@ -157,7 +204,11 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        // ── Revenue ────────────────────────────────────────────────────────────
+        /// <summary>Get platform revenue summary</summary>
+        /// <remarks>
+        /// Returns total revenue, vendor payouts, and pending payments with month-over-month change percentages.
+        /// Change percent is null if there is no previous month data to compare against.
+        /// </remarks>
 
         [HttpGet("revenue")]
         [ProducesResponseType(typeof(ApiResponse<AdminRevenueSummaryDto>), 200)]
@@ -167,6 +218,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Get all revenue transactions (paginated)</summary>
+        /// <remarks>**status filter:** `completed`, `pending`, `failed`</remarks>
         [HttpGet("revenue/transactions")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AdminTransactionItemDto>>), 200)]
         public async Task<IActionResult> GetTransactions([FromQuery] AdminTransactionQueryDto query)
@@ -175,8 +228,11 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        // ── Withdrawals ────────────────────────────────────────────────────────
-
+        /// <summary>List vendor withdrawal requests</summary>
+        /// <remarks>
+        /// **status filter values:** `pending`, `processing`, `completed`, `failed`
+        /// Use `q` to search by vendor name or email.
+        /// </remarks>
         [HttpGet("withdrawals")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AdminWithdrawalItemDto>>), 200)]
         public async Task<IActionResult> GetWithdrawals([FromQuery] AdminWithdrawalQueryDto query)
@@ -185,6 +241,7 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Approve a withdrawal and release funds to vendor's bank</summary>
         [HttpPost("withdrawals/{id:guid}/approve")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> ApproveWithdrawal(Guid id)
@@ -193,6 +250,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Place a withdrawal on hold pending review</summary>
+        /// <remarks>Provide a reason that will be visible to the vendor.</remarks>
         [HttpPost("withdrawals/{id:guid}/hold")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> HoldWithdrawal(Guid id, [FromBody] AdminWithdrawalActionDto request)
@@ -201,6 +260,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Reject a withdrawal request</summary>
+        /// <remarks>Funds return to vendor's available balance. Provide a reason.</remarks>
         [HttpPost("withdrawals/{id:guid}/reject")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> RejectWithdrawal(Guid id, [FromBody] AdminWithdrawalActionDto request)
@@ -209,8 +270,11 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        // ── KYC ────────────────────────────────────────────────────────────────
-
+        /// <summary>Get KYC verification queue</summary>
+        /// <remarks>
+        /// **status filter:** `pending` (default), `verified`, `rejected`, `notstarted`
+        /// Use `q` to search by vendor name or email.
+        /// </remarks>
         [HttpGet("kyc/queue")]
         [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AdminKycQueueItemDto>>), 200)]
         public async Task<IActionResult> GetKycQueue([FromQuery] AdminKycQueryDto query)
@@ -219,6 +283,11 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Get full KYC submission details including document download URL</summary>
+        /// <remarks>
+        /// Returns all vendor identity information and the URL to download/view their uploaded document.
+        /// Use `documentDownloadUrl` to view the document before approving or rejecting.
+        /// </remarks>
         [HttpGet("kyc/{submissionId:guid}")]
         [ProducesResponseType(typeof(ApiResponse<AdminKycDetailDto>), 200)]
         public async Task<IActionResult> GetKycDetail(Guid submissionId)
@@ -227,6 +296,8 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Approve KYC — grants vendor full platform access</summary>
+        /// <remarks>KYC status changes to `Verified`. Vendor is notified and can now publish listings.</remarks>
         [HttpPost("kyc/{submissionId:guid}/approve")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> ApproveKyc(Guid submissionId)
@@ -235,6 +306,11 @@ namespace Afrimine.Api.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Reject KYC with reason</summary>
+        /// <remarks>
+        /// KYC status changes to `Rejected`. Vendor sees the rejection reason and can resubmit.
+        /// Provide a clear reason explaining what was wrong with the document.
+        /// </remarks>
         [HttpPost("kyc/{submissionId:guid}/reject")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> RejectKyc(Guid submissionId, [FromBody] AdminKycActionDto request)
