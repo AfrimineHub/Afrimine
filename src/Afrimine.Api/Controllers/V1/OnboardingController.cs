@@ -21,7 +21,17 @@ namespace Afrimine.Api.Controllers.V1
             _service = service;
         }
 
-        /// <summary>Step 2 — Business profile setup</summary>
+        /// <summary>Setup business profile (Onboarding Step 1 of 3)</summary>
+        /// <remarks>
+        /// Save business type, country, state, office address and website.
+        /// Must be completed before uploading KYC documents.
+        ///
+        /// **BusinessType values:**
+        /// - `1` = Individual
+        /// - `2` = Company
+        /// - `3` = Cooperative
+        /// - `4` = GovernmentEntity
+        /// </remarks>
         [HttpPost("business-profile")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> SetupBusinessProfile([FromBody] BusinessProfileDto request)
@@ -34,7 +44,20 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Step 3 — KYC document upload</summary>
+        /// <summary>Upload KYC verification document (Onboarding Step 2 of 3)</summary>
+        /// <remarks>
+        /// Upload one of the accepted identity/business documents.
+        /// Use `multipart/form-data` — key name: `file`
+        /// **Accepted formats:** PDF, JPG, PNG — **Max size:** 10MB
+        ///
+        /// **DocumentType values:**
+        /// - `1` = GovernmentIdOrPassport
+        /// - `2` = CompanyRegistrationCertificate
+        /// - `3` = MiningLicense
+        /// - `4` = ExportLicense
+        /// - `5` = MineralLicense
+        /// </remarks>
+
         [HttpPost("kyc")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         public async Task<IActionResult> UploadKyc([FromForm] KycUploadDto request)
@@ -47,7 +70,16 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Get onboarding profile and current step</summary>
+        /// <summary>Get current vendor onboarding profile and KYC status</summary>
+        /// <remarks>
+        /// Returns the vendor's current profile including KYC verification status.
+        ///
+        /// **KycStatus values:**
+        /// - `NotStarted` — no document uploaded yet
+        /// - `Pending` — document uploaded, awaiting admin review
+        /// - `Verified` — KYC approved, full platform access
+        /// - `Rejected` — rejected with reason, resubmit required
+        /// </remarks>
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<VendorProfileResponseDto>), 200)]
         public async Task<IActionResult> GetProfile()
