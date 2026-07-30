@@ -6,6 +6,8 @@ namespace Afrimine.Services.DTOs
     {
         public string FullName { get; set; } = default!;
         public string? CompanyName { get; set; }
+        public string? BusinessEmail { get; set; }
+        public string? BusinessPhone { get; set; }
         public string Email { get; set; } = default!;
         public string Phone { get; set; } = default!;
         public RoleType Type { get; set; }

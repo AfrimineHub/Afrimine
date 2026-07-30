@@ -34,13 +34,7 @@ namespace Afrimine.Api.Controllers.V1
         ///
         /// **Password requirements:** Min 8 chars, uppercase, lowercase, digit, special character.
         /// </remarks>
-        [AllowAnonymous]
-        [HttpPost("suppliers/register")]
-        public async Task<IActionResult> Register([FromBody] SupplierRegisterDto request)
-        {
-            var response = await _service.Equipment.RegisterSupplierAsync(request);
-            return StatusCode(response.StatusCode, response);
-        }
+    
 
 
         /// <summary>Get authenticated supplier's full profile (Vendor only)</summary>

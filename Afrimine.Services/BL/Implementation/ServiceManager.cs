@@ -31,7 +31,7 @@ namespace Afrimine.Services.BL.Implementation
                             IEquipmentRepository equipmentRepository,
                             IPayscrowService payscrowService)
         {
-            _userService = new Lazy<IUserService>(() => new UserService(userManager, signInManager, options, repositoryManager, cloudinary));
+            _userService = new Lazy<IUserService>(() => new UserService(userManager, signInManager, options, repositoryManager, cloudinary, equipmentRepository));
             _dashboardService = new Lazy<IDashboardService>(() => new DashboardService(repositoryManager));
             _vendorListingService = new Lazy<IVendorListingService>(() => new VendorListingService(repositoryManager, cloudinary));
             _buyerService = new Lazy<IBuyerService>(() => new BuyerService(repositoryManager));

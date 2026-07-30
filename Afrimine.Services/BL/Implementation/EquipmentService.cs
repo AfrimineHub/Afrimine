@@ -38,43 +38,43 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         // ── Supplier Registration ──────────────────────────────────────────────
-        public async Task<ApiResponse<string>> RegisterSupplierAsync(SupplierRegisterDto request)
-        {
-            var existing = await _userManager.FindByEmailAsync(request.BusinessEmail);
-            if (existing is not null)
-                return ApiResponse<string>.Fail("Email already registered.", 409);
+        //public async Task<ApiResponse<string>> RegisterSupplierAsync(SupplierRegisterDto request)
+        //{
+        //    var existing = await _userManager.FindByEmailAsync(request.BusinessEmail);
+        //    if (existing is not null)
+        //        return ApiResponse<string>.Fail("Email already registered.", 409);
 
-            var user = new User
-            {
-                FullName = request.FullName,
-                UserName = request.BusinessEmail,
-                Email = request.BusinessEmail,
-                PhoneNumber = request.BusinessPhone,
-                EmailConfirmed = false,
-                Type = RoleType.Vendor,
-                Status = AccountStatus.Pending
-            };
+        //    var user = new User
+        //    {
+        //        FullName = request.FullName,
+        //        UserName = request.BusinessEmail,
+        //        Email = request.BusinessEmail,
+        //        PhoneNumber = request.BusinessPhone,
+        //        EmailConfirmed = false,
+        //        Type = RoleType.Vendor,
+        //        Status = AccountStatus.Pending
+        //    };
 
-            var result = await _userManager.CreateAsync(user, request.Password);
-            if (!result.Succeeded)
-                return ApiResponse<string>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)), 400);
+        //    var result = await _userManager.CreateAsync(user, request.Password);
+        //    if (!result.Succeeded)
+        //        return ApiResponse<string>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)), 400);
 
-            // Create supplier profile
-            await _equipment.CreateSupplierProfileAsync(new SupplierProfile
-            {
-                UserId = user.Id,
-                CompanyName = request.CompanyName,
-                BusinessPhone = request.BusinessPhone,
-                BusinessEmail = request.BusinessEmail,
-                OnboardingStep = 1
-            });
+        //    // Create supplier profile
+        //    await _equipment.CreateSupplierProfileAsync(new SupplierProfile
+        //    {
+        //        UserId = user.Id,
+        //        CompanyName = request.CompanyName,
+        //        BusinessPhone = request.BusinessPhone,
+        //        BusinessEmail = request.BusinessEmail,
+        //        OnboardingStep = 1
+        //    });
 
-            // Create wallet
-            await _equipment.CreateWalletAsync(new SupplierWallet { SupplierId = user.Id });
-            await _repository.SaveAsync();
+        //    // Create wallet
+        //    await _equipment.CreateWalletAsync(new SupplierWallet { SupplierId = user.Id });
+        //    await _repository.SaveAsync();
 
-            return ApiResponse<string>.Ok("Supplier registered successfully. Please verify your phone number.");
-        }
+        //    return ApiResponse<string>.Ok("Supplier registered successfully. Please verify your phone number.");
+        //}
 
         public async Task<ApiResponse<SupplierProfileResponseDto>> UpdateProfileAsync(
             string userId, SupplierProfileUpdateDto request)

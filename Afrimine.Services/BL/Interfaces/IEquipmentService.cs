@@ -7,7 +7,7 @@ namespace Afrimine.Services.BL.Interfaces
     public interface IEquipmentService
     {
         // Supplier onboarding
-        Task<ApiResponse<string>> RegisterSupplierAsync(SupplierRegisterDto request);
+        //Task<ApiResponse<string>> RegisterSupplierAsync(SupplierRegisterDto request);
         Task<ApiResponse<SupplierProfileResponseDto>> UpdateProfileAsync(string userId, SupplierProfileUpdateDto request);
         Task<ApiResponse<string>> UpdateLocationAsync(string userId, SupplierLocationDto request);
         Task<ApiResponse<string>> UploadDocumentAsync(string userId, SupplierDocumentUploadDto request);
