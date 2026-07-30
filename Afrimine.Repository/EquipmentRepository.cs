@@ -142,5 +142,35 @@ namespace Afrimine.Repository
                 .Include(x => x.Wallet)
                 .Where(x => x.Wallet.SupplierId == supplierId)
                 .OrderByDescending(x => x.CreatedAt).ToListAsync();
+
+        public async Task<(IEnumerable<Asset> Items, int TotalCount)> SearchAssetsAsync(string? q, MachineType? machineType, string? location,decimal? maxDailyRate, bool availableOnly,int page, int pageSize)
+        {
+            IQueryable<Asset> query = _context.Set<Asset>()
+                .Include(x => x.Supplier)
+                .Where(x => !x.IsDeleted);
+
+            if (availableOnly)
+                query = query.Where(x => x.Status == AssetStatus.Available);
+
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(x => x.Brand.Contains(q)
+                    || x.Model.Contains(q)
+                    || x.Description!.Contains(q));
+
+            if (machineType.HasValue)
+                query = query.Where(x => x.MachineType == machineType.Value);
+
+            if (maxDailyRate.HasValue)
+                query = query.Where(x => x.DailyRentalRate <= maxDailyRate.Value);
+
+            var total = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, total);
+        }
     }
 }

@@ -1,4 +1,6 @@
-﻿using Afrimine.Model.ViewModels;
+﻿using Afrimine.Model.Enums;
+using Afrimine.Model.ViewModels;
+using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
 using static Afrimine.Services.DTOs.SupplierDto;
 
@@ -72,5 +74,6 @@ namespace Afrimine.Services.BL.Interfaces
 
         // Webhook handler
         Task HandlePayscrowWebhookAsync(PayscrowWebhookPayload payload);
+        Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly, int page, int pageSize);
     }
 }

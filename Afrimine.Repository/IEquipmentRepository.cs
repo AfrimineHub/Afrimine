@@ -46,5 +46,6 @@ namespace Afrimine.Repository
         void UpdateWallet(SupplierWallet wallet);
         Task AddWalletTransactionAsync(WalletTransaction transaction);
         Task<IEnumerable<WalletTransaction>> GetWalletTransactionsAsync(string supplierId);
+        Task<(IEnumerable<Asset> Items, int TotalCount)> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly,int page, int pageSize);
     }
 }
