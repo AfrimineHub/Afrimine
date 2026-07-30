@@ -3,6 +3,7 @@ using Afrimine.Model.Enums;
 using Afrimine.Model.ViewModels;
 using Afrimine.Repository;
 using Afrimine.Services.BL.Interfaces;
+using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
 using Afrimine.Shared.Configs;
 using Microsoft.AspNetCore.Identity;
@@ -1020,6 +1021,19 @@ namespace Afrimine.Services.BL.Implementation
                 _equipment.UpdateBooking(booking);
                 await _repository.SaveAsync();
             }
+        }
+
+        public async Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly,int page, int pageSize)
+        {
+            var (items, total) = await _equipment.SearchAssetsAsync(q, machineType, location, maxDailyRate, availableOnly, page, pageSize);
+
+            return ApiResponse<PagedResultDto<AssetResponseDto>>.Ok(new PagedResultDto<AssetResponseDto>
+            {
+                Items = items.Select(MapToAssetDto),
+                TotalCount = total,
+                Page = page,
+                PageSize = pageSize
+            });
         }
 
         // ── Private helpers ───────────────────────────────────────────────────

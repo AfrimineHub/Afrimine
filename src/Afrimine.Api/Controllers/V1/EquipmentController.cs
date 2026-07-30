@@ -1,5 +1,7 @@
-﻿using Afrimine.Services.BL.Interfaces;
+﻿using Afrimine.Model.Enums;
+using Afrimine.Services.BL.Interfaces;
 using Afrimine.Services.DTOs;
+using Afrimine.Services.Responses;
 using Afrimine.Shared.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -1041,6 +1043,29 @@ namespace Afrimine.Api.Controllers.V1
         public async Task<IActionResult> GetSupportedBanks()
         {
             var response = await _service.Equipment.GetSupportedBanksAsync();
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Browse all available machines on the marketplace — no auth required (public)</summary>
+        /// <remarks>
+        /// Public listing of all available equipment for rent. Buyers can browse and filter before booking.
+        ///
+        /// **Query params:**
+        /// - `q` — search text (matches brand, model, description)
+        /// - `machineType` — filter by type: 0=Excavator, 1=Bulldozer, 2=Payloader, 3=Tipper, 4=Grader, 5=Crane, 6=Compactor
+        /// - `location` — filter by supplier base city (e.g. "Jos", "Abuja")
+        /// - `maxDailyRate` — maximum daily rental rate in NGN
+        /// - `availableOnly` — `true` to show only machines ready to book (default: true)
+        /// - `page`, `pageSize` — pagination
+        ///
+        /// Use `GET /assets/{id}/pricing` to get the full cost breakdown for a specific machine before booking.
+        /// </remarks>
+        [AllowAnonymous]
+        [HttpGet("marketplace/assets")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AssetResponseDto>>), 200)]
+        public async Task<IActionResult> SearchAssets([FromQuery] string? q, [FromQuery] MachineType? machineType, [FromQuery] string? location, [FromQuery] decimal? maxDailyRate, [FromQuery] bool availableOnly = true, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var response = await _service.Equipment.SearchAssetsAsync(q, machineType, location, maxDailyRate, availableOnly, page, pageSize);
             return StatusCode(response.StatusCode, response);
         }
     }
