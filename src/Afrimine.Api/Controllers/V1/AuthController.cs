@@ -24,15 +24,14 @@ namespace Afrimine.Api.Controllers.V1
 
         /// <summary>Register a new user account</summary>
         /// <remarks>
-        /// Creates a new account. After registration an OTP is sent to your email — verify it using `POST /auth/confirm-email`.
+        /// Creates a new account. After registration an OTP is sent to your email.
         ///
         /// **Role values:**
-        /// - `1` = Vendor — sells equipment, minerals, or manpower on the platform
-        /// - `2` = Buyer — purchases or rents from vendors
-        /// - `3` = Investor — invests in mining opportunities
-        /// - `4` = Support — internal support staff
+        /// - `1` = Vendor — include `companyName` to register as a supplier (creates profile + wallet)
+        /// - `2` = Buyer
+        /// - `3` = Investor
         ///
-        /// **Password requirements:** Minimum 8 characters, must include uppercase, lowercase, digit, and special character.
+        /// **Password requirements:** Minimum 8 characters, uppercase, lowercase, digit, and special character.
         /// </remarks>
         [AllowAnonymous]
         [HttpPost("register")]

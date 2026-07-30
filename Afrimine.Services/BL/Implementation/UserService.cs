@@ -29,15 +29,17 @@ namespace Afrimine.Services.BL.Implementation
         private readonly AppConfig _settings;
         private readonly IRepositoryManager _repositoryManager;
         private readonly ICloudinaryService _cloudinary;
+        private readonly IEquipmentRepository _equipment;
 
         public UserService(UserManager<User> userManager,
-                        SignInManager<User> signInManager, IOptions<AppConfig> options, IRepositoryManager repositoryManager, ICloudinaryService cloudinary)
+                        SignInManager<User> signInManager, IOptions<AppConfig> options, IRepositoryManager repositoryManager, ICloudinaryService cloudinary, IEquipmentRepository equipment)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _settings = options.Value;
             _repositoryManager = repositoryManager;
             _cloudinary = cloudinary;
+            _equipment = equipment;
         }
 
         public async Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request)
@@ -91,43 +93,80 @@ namespace Afrimine.Services.BL.Implementation
                 return ApiResponse<string>.Fail(validate.Errors.FirstOrDefault()?.ErrorMessage ?? ResponseMessages.InvalidRequest, 400);
             }
 
-            // Only these roles can self-register
-            var allowedRoles = new[]
-            {
-                RoleType.Buyer,
-                RoleType.Vendor,
-                RoleType.Investor
-            };
-
+            var allowedRoles = new[] { RoleType.Buyer, RoleType.Vendor, RoleType.Investor };
             if (!allowedRoles.Contains(request.Type))
-                return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Type), 403);
-
-            if (request.Type == RoleType.SuperAdmin || request.Type == RoleType.Support)
             {
                 return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Type), 403);
             }
 
-            var existing = await _userManager.Users.AnyAsync(u => u.Email == request.Email || u.PhoneNumber == request.Phone);
+            var emailToCheck = request.BusinessEmail ?? request.Email;
+
+            var existing = await _userManager.Users.AnyAsync(u =>
+                u.Email == emailToCheck ||
+                u.PhoneNumber == request.Phone);
 
             if (existing)
             {
                 return ApiResponse<string>.Fail(ResponseMessages.ExistingUser, 409);
             }
 
-            var user = request.Initialize();
-            var createResult = await _userManager.CreateAsync(user, request.Password);
+            bool isSupplier = request.Type == RoleType.Vendor && !string.IsNullOrWhiteSpace(request.CompanyName);
 
+            User user;
+            if (isSupplier)
+            {
+                var identityEmail = !string.IsNullOrWhiteSpace(request.BusinessEmail)
+                    ? request.BusinessEmail
+                    : request.Email;
+
+                user = new User
+                {
+                    FullName = request.FullName,
+                    UserName = identityEmail,
+                    Email = identityEmail,
+                    PhoneNumber = !string.IsNullOrWhiteSpace(request.BusinessPhone)
+                        ? request.BusinessPhone
+                        : request.Phone,
+                    EmailConfirmed = false,
+                    Type = RoleType.Vendor,
+                    Status = AccountStatus.Pending
+                };
+            }
+            else
+            {
+                user = request.Initialize();
+            }
+
+            var createResult = await _userManager.CreateAsync(user, request.Password);
             if (!createResult.Succeeded)
             {
-                return ApiResponse<string>.Fail(createResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed, 400);
+                return ApiResponse<string>.Fail(
+                    createResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed,
+                    400);
             }
 
             var roleResult = await _userManager.AddToRoleAsync(user, request.Type.ToString());
             if (!roleResult.Succeeded)
             {
                 await _userManager.DeleteAsync(user);
+                return ApiResponse<string>.Fail(
+                    roleResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed,
+                    400);
+            }
 
-                return ApiResponse<string>.Fail(roleResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed, 400);
+            if (isSupplier)
+            {
+                await _equipment.CreateSupplierProfileAsync(new SupplierProfile
+                {
+                    UserId = user.Id,
+                    CompanyName = request.CompanyName!,
+                    BusinessPhone = request.BusinessPhone,
+                    BusinessEmail = request.BusinessEmail,
+                    OnboardingStep = 1
+                });
+
+                await _equipment.CreateWalletAsync(new SupplierWallet { SupplierId = user.Id });
+                await _repositoryManager.SaveAsync();
             }
 
             var otp = TokenHelpers.GenerateOtp();
@@ -138,10 +177,13 @@ namespace Afrimine.Services.BL.Implementation
             await _repositoryManager.SaveAsync();
 
             var html = GetEmailTemplate.GetConfirmEmailTemplate(otp);
-
             Notifications.SendEmail(user.Email!, "Confirm Email Address", html, html);
 
-            return ApiResponse<string>.Ok(user.Email!, 200, "OTP sent successfully");
+            string message = isSupplier
+                ? "Supplier registered successfully. Please confirm your email with the OTP sent."
+                : "OTP sent successfully";
+
+            return ApiResponse<string>.Ok(user.Email!, 200, message);
         }
 
         public async Task<ApiResponse<LoginResponseDto>> RefreshTokenAsync(string? refreshToken, RefreshTokenRequestDto request)
