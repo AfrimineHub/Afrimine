@@ -152,7 +152,6 @@ namespace Afrimine.Repository
         {
             IQueryable<Asset> query = _context.Set<Asset>()
                 .Include(x => x.Supplier)
-                //.Include(x => x.Supp)
                 .Where(x => !x.IsDeleted);
 
             if (availableOnly)
