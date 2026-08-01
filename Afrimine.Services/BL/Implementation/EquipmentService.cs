@@ -1055,8 +1055,8 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
                 var dto = MapToAssetDto(a);
                 if (profileMap.TryGetValue(a.SupplierId, out var profile))
                 {
-                    dto.SupplierCity = profile.OfficeAddress;
-                    //dto.SupplierYardAddress = profile.YardAddress;
+                    dto.SupplierCity = profile.StateOrRegion;
+                    dto.SupplierYardAddress = profile.OfficeAddress;
                 }
                 return dto;
             });
