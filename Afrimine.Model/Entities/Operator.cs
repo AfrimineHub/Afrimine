@@ -4,8 +4,8 @@ namespace Afrimine.Model.Entities
 {
     public class Operator : BaseEntity
     {
-        public string SupplierId { get; set; } = string.Empty;
-        public User Supplier { get; set; } = null!;
+        public Guid SupplierId { get; set; }
+        public SupplierProfile Supplier { get; set; } = null!;
         public string FullName { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string LicenseNumber { get; set; } = string.Empty;

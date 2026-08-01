@@ -85,18 +85,127 @@ namespace Afrimine.Services.BL.Implementation
             });
         }
 
+        //public async Task<ApiResponse<string>> RegisterUserAsync(RegisterRequestDto request)
+        //{
+        //    var validate = new RegistrationRequestValidator().Validate(request);
+        //    if (!validate.IsValid)
+        //    {
+        //        return ApiResponse<string>.Fail(validate.Errors.FirstOrDefault()?.ErrorMessage ?? ResponseMessages.InvalidRequest, 400);
+        //    }
+
+        //    var allowedRoles = new[] { RoleType.Buyer, RoleType.Vendor, RoleType.Investor };
+        //    if (!allowedRoles.Contains(request.Type))
+        //    {
+        //        return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Type), 403);
+        //    }
+
+        //    var emailToCheck = request.BusinessEmail ?? request.Email;
+
+        //    var existing = await _userManager.Users.AnyAsync(u =>
+        //        u.Email == emailToCheck ||
+        //        u.PhoneNumber == request.Phone);
+
+        //    if (existing)
+        //    {
+        //        return ApiResponse<string>.Fail(ResponseMessages.ExistingUser, 409);
+        //    }
+
+        //    bool isSupplier = request.Type == RoleType.Vendor && !string.IsNullOrWhiteSpace(request.CompanyName);
+
+        //    User user;
+        //    if (isSupplier)
+        //    {
+        //        var supplierId = Guid.Parse(user.Id);
+
+        //        var identityEmail = !string.IsNullOrWhiteSpace(request.BusinessEmail)
+        //            ? request.BusinessEmail
+        //            : request.Email;
+
+        //        user = new User
+        //        {
+        //            FullName = request.FullName,
+        //            UserName = identityEmail,
+        //            Email = identityEmail,
+        //            PhoneNumber = !string.IsNullOrWhiteSpace(request.BusinessPhone)
+        //                ? request.BusinessPhone
+        //                : request.Phone,
+        //            EmailConfirmed = false,
+        //            Type = RoleType.Vendor,
+        //            Status = AccountStatus.Pending
+        //        };
+        //    }
+        //    else
+        //    {
+        //        user = request.Initialize();
+        //    }
+
+        //    var createResult = await _userManager.CreateAsync(user, request.Password);
+        //    if (!createResult.Succeeded)
+        //    {
+        //        return ApiResponse<string>.Fail(
+        //            createResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed,
+        //            400);
+        //    }
+
+        //    var roleResult = await _userManager.AddToRoleAsync(user, request.Type.ToString());
+        //    if (!roleResult.Succeeded)
+        //    {
+        //        await _userManager.DeleteAsync(user);
+        //        return ApiResponse<string>.Fail(
+        //            roleResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed,
+        //            400);
+        //    }
+
+        //    if (isSupplier)
+        //    {
+        //        await _equipment.CreateSupplierProfileAsync(new SupplierProfile
+        //        {
+        //            UserId = user.Id,
+        //            CompanyName = request.CompanyName!,
+        //            BusinessPhone = request.BusinessPhone,
+        //            BusinessEmail = request.BusinessEmail,
+        //            OnboardingStep = 1
+        //        });
+
+        //        await _equipment.CreateWalletAsync(new SupplierWallet 
+        //        { SupplierId = profile.Id });
+
+        //        await _repositoryManager.SaveAsync();
+        //    }
+
+        //    var otp = TokenHelpers.GenerateOtp();
+        //    var hash = TokenHelpers.HashToken(otp, _settings.JwtKey);
+        //    var tokenEntry = ObjectsInitializer.InitializeOtpEntry(user.Id, hash, EToken.ConfirmEmail);
+
+        //    await _repositoryManager.Otp.CreateToken(tokenEntry);
+        //    await _repositoryManager.SaveAsync();
+
+        //    var html = GetEmailTemplate.GetConfirmEmailTemplate(otp);
+        //    Notifications.SendEmail(user.Email!, "Confirm Email Address", html, html);
+
+        //    string message = isSupplier
+        //        ? "Supplier registered successfully. Please confirm your email with the OTP sent."
+        //        : "OTP sent successfully";
+
+        //    return ApiResponse<string>.Ok(user.Email!, 200, message);
+        //}
+
         public async Task<ApiResponse<string>> RegisterUserAsync(RegisterRequestDto request)
         {
             var validate = new RegistrationRequestValidator().Validate(request);
             if (!validate.IsValid)
             {
-                return ApiResponse<string>.Fail(validate.Errors.FirstOrDefault()?.ErrorMessage ?? ResponseMessages.InvalidRequest, 400);
+                return ApiResponse<string>.Fail(
+                    validate.Errors.FirstOrDefault()?.ErrorMessage ?? ResponseMessages.InvalidRequest,
+                    400);
             }
 
             var allowedRoles = new[] { RoleType.Buyer, RoleType.Vendor, RoleType.Investor };
             if (!allowedRoles.Contains(request.Type))
             {
-                return ApiResponse<string>.Fail(string.Format(ResponseMessages.InvalidRegistrationRole, request.Type), 403);
+                return ApiResponse<string>.Fail(
+                    string.Format(ResponseMessages.InvalidRegistrationRole, request.Type),
+                    403);
             }
 
             var emailToCheck = request.BusinessEmail ?? request.Email;
@@ -110,7 +219,8 @@ namespace Afrimine.Services.BL.Implementation
                 return ApiResponse<string>.Fail(ResponseMessages.ExistingUser, 409);
             }
 
-            bool isSupplier = request.Type == RoleType.Vendor && !string.IsNullOrWhiteSpace(request.CompanyName);
+            bool isSupplier = request.Type == RoleType.Vendor
+                && !string.IsNullOrWhiteSpace(request.CompanyName);
 
             User user;
             if (isSupplier)
@@ -156,8 +266,11 @@ namespace Afrimine.Services.BL.Implementation
 
             if (isSupplier)
             {
+                var supplierId = Guid.Parse(user.Id);   // Identity Id is always a Guid string
+
                 await _equipment.CreateSupplierProfileAsync(new SupplierProfile
                 {
+                    Id = supplierId,           // same as User.Id, parsed to Guid
                     UserId = user.Id,
                     CompanyName = request.CompanyName!,
                     BusinessPhone = request.BusinessPhone,
@@ -165,7 +278,11 @@ namespace Afrimine.Services.BL.Implementation
                     OnboardingStep = 1
                 });
 
-                await _equipment.CreateWalletAsync(new SupplierWallet { SupplierId = user.Id });
+                await _equipment.CreateWalletAsync(new SupplierWallet
+                {
+                    SupplierId = supplierId    // same Guid everywhere
+                });
+
                 await _repositoryManager.SaveAsync();
             }
 

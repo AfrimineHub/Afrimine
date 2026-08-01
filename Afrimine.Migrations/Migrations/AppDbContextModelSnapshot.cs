@@ -85,9 +85,8 @@ namespace Afrimine.Migrations.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<string>("SupplierId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -268,9 +267,8 @@ namespace Afrimine.Migrations.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<string>("SupplierId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("SupplierPayout")
                         .HasColumnType("numeric");
@@ -1070,9 +1068,8 @@ namespace Afrimine.Migrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("SupplierId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1681,7 +1678,6 @@ namespace Afrimine.Migrations.Migrations
             modelBuilder.Entity("Afrimine.Model.Entities.SupplierProfile", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("BankAccountName")
@@ -1786,9 +1782,8 @@ namespace Afrimine.Migrations.Migrations
                     b.Property<decimal>("PendingBalance")
                         .HasColumnType("numeric");
 
-                    b.Property<string>("SupplierId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -2079,35 +2074,35 @@ namespace Afrimine.Migrations.Migrations
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b526",
-                            ConcurrencyStamp = "7/19/2026 4:00:33 PM",
+                            ConcurrencyStamp = "8/1/2026 10:52:20 AM",
                             Name = "Vendor",
                             NormalizedName = "VENDOR"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b527",
-                            ConcurrencyStamp = "7/19/2026 4:00:33 PM",
+                            ConcurrencyStamp = "8/1/2026 10:52:20 AM",
                             Name = "Buyer",
                             NormalizedName = "BUYER"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b528",
-                            ConcurrencyStamp = "7/19/2026 4:00:33 PM",
+                            ConcurrencyStamp = "8/1/2026 10:52:20 AM",
                             Name = "Support",
                             NormalizedName = "SUPPORT"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b529",
-                            ConcurrencyStamp = "7/19/2026 4:00:33 PM",
+                            ConcurrencyStamp = "8/1/2026 10:52:20 AM",
                             Name = "SuperAdmin",
                             NormalizedName = "SUPERADMIN"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b530",
-                            ConcurrencyStamp = "7/19/2026 4:00:33 PM",
+                            ConcurrencyStamp = "8/1/2026 10:52:20 AM",
                             Name = "Investor",
                             NormalizedName = "INVESTOR"
                         });
@@ -2221,10 +2216,10 @@ namespace Afrimine.Migrations.Migrations
 
             modelBuilder.Entity("Afrimine.Model.Entities.Asset", b =>
                 {
-                    b.HasOne("Afrimine.Model.Entities.User", "Supplier")
+                    b.HasOne("Afrimine.Model.Entities.SupplierProfile", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Supplier");
@@ -2263,7 +2258,7 @@ namespace Afrimine.Migrations.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Afrimine.Model.Entities.User", "Supplier")
+                    b.HasOne("Afrimine.Model.Entities.SupplierProfile", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2466,7 +2461,7 @@ namespace Afrimine.Migrations.Migrations
 
             modelBuilder.Entity("Afrimine.Model.Entities.Operator", b =>
                 {
-                    b.HasOne("Afrimine.Model.Entities.User", "Supplier")
+                    b.HasOne("Afrimine.Model.Entities.SupplierProfile", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2641,7 +2636,7 @@ namespace Afrimine.Migrations.Migrations
 
             modelBuilder.Entity("Afrimine.Model.Entities.SupplierWallet", b =>
                 {
-                    b.HasOne("Afrimine.Model.Entities.User", "Supplier")
+                    b.HasOne("Afrimine.Model.Entities.SupplierProfile", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict)

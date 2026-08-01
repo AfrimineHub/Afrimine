@@ -8,8 +8,8 @@ namespace Afrimine.Model.Entities
         public Asset Asset { get; set; } = null!;
         public string MinerId { get; set; } = string.Empty;
         public User Miner { get; set; } = null!;
-        public string SupplierId { get; set; } = string.Empty;
-        public User Supplier { get; set; } = null!;
+        public Guid SupplierId { get; set; } = Guid.Empty;
+        public SupplierProfile Supplier { get; set; } = null!;
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public int TotalDays { get; set; }

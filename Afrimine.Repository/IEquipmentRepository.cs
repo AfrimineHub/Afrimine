@@ -7,20 +7,20 @@ namespace Afrimine.Repository
     {
         // Supplier
         Task CreateSupplierProfileAsync(SupplierProfile profile);
-        Task<SupplierProfile?> GetSupplierProfileAsync(string userId);
+        Task<SupplierProfile?> GetSupplierProfileAsync(Guid supplierId);
         void UpdateSupplierProfile(SupplierProfile profile);
 
         // Assets
         Task CreateAssetAsync(Asset asset);
         Task<Asset?> GetAssetAsync(Guid assetId);
-        Task<IEnumerable<Asset>> GetAssetsBySupplierAsync(string supplierId);
+        Task<IEnumerable<Asset>> GetAssetsBySupplierAsync(Guid supplierId);
         void UpdateAsset(Asset asset);
-        Task<int> CountAssetsAsync(string supplierId);
+        Task<int> CountAssetsAsync(Guid supplierId);
 
         // Operators
         Task CreateOperatorAsync(Operator op);
         Task<Operator?> GetOperatorAsync(Guid operatorId);
-        Task<IEnumerable<Operator>> GetOperatorsBySupplierAsync(string supplierId);
+        Task<IEnumerable<Operator>> GetOperatorsBySupplierAsync(Guid supplierId);
         void UpdateOperator(Operator op);
         Task AssignOperatorAsync(AssetOperator assetOperator);
         Task AddGuarantorAsync(Guarantor guarantor);
@@ -32,20 +32,21 @@ namespace Afrimine.Repository
         Task<IEnumerable<Booking>> GetBookingsAsync(string userId, BookingStatus? status);
         Task<Booking?> GetBookingByPayscrowRefAsync(string reference);
         void UpdateBooking(Booking booking);
-        Task<int> CountActiveBookingsAsync(string supplierId);
+        Task<int> CountActiveBookingsAsync(Guid supplierId);
 
         // Daily checks & disputes
         Task AddDailyCheckAsync(DailyCheck check);
         Task AddDisputeAsync(BookingDispute dispute);
         Task<IEnumerable<BookingDispute>> GetBookingDisputesAsync(Guid bookingId);
-        Task<IEnumerable<BookingDispute>> GetSupplierDisputesAsync(string supplierId);
+        Task<IEnumerable<BookingDispute>> GetSupplierDisputesAsync(Guid supplierId);
 
         // Wallet
         Task CreateWalletAsync(SupplierWallet wallet);
-        Task<SupplierWallet?> GetWalletAsync(string supplierId);
+        Task<SupplierWallet?> GetWalletAsync(Guid supplierId);
         void UpdateWallet(SupplierWallet wallet);
         Task AddWalletTransactionAsync(WalletTransaction transaction);
-        Task<IEnumerable<WalletTransaction>> GetWalletTransactionsAsync(string supplierId);
+        Task<IEnumerable<WalletTransaction>> GetWalletTransactionsAsync(Guid supplierId);
         Task<(IEnumerable<Asset> Items, int TotalCount)> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly,int page, int pageSize);
+        Task<SupplierProfile?> GetSupplierProfileByUserIdAsync(string userId);
     }
 }

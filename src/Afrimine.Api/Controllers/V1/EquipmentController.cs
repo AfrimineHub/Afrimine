@@ -191,7 +191,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.CreateAssetAsync(userId, request);
+            var response = await _service.Equipment.CreateAssetAsync(Guid.Parse(userId), request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -213,7 +213,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.GetAssetsAsync(userId);
+            var response = await _service.Equipment.GetAssetsAsync(Guid.Parse(userId));
             return StatusCode(response.StatusCode, response);
         }
 
@@ -230,7 +230,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.GetAssetAsync(userId, assetId);
+            var response = await _service.Equipment.GetAssetAsync(Guid.Parse(userId), assetId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -248,7 +248,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.UpdateAssetAsync(userId, assetId, request);
+            var response = await _service.Equipment.UpdateAssetAsync(Guid.Parse(userId), assetId, request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -266,7 +266,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.DeleteAssetAsync(userId, assetId);
+            var response = await _service.Equipment.DeleteAssetAsync(Guid.Parse(userId), assetId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -290,7 +290,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.UploadAssetPhotosAsync(userId, assetId, request);
+            var response = await _service.Equipment.UploadAssetPhotosAsync(Guid.Parse(userId), assetId, request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -335,7 +335,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.AssignOperatorToAssetAsync(userId, assetId, operatorId);
+            var response = await _service.Equipment.AssignOperatorToAssetAsync(Guid.Parse(userId), assetId, operatorId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -366,7 +366,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.CreateOperatorAsync(userId, request);
+            var response = await _service.Equipment.CreateOperatorAsync(Guid.Parse(userId), request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -386,7 +386,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.GetOperatorsAsync(userId);
+            var response = await _service.Equipment.GetOperatorsAsync(Guid.Parse(userId));
             return StatusCode(response.StatusCode, response);
         }
 
@@ -403,7 +403,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.UpdateOperatorAsync(userId, operatorId, request);
+            var response = await _service.Equipment.UpdateOperatorAsync(Guid.Parse(userId), operatorId, request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -424,7 +424,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.AddGuarantorAsync(userId, operatorId, request);
+            var response = await _service.Equipment.AddGuarantorAsync(Guid.Parse(userId), operatorId, request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -446,7 +446,7 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.SubmitVettingAsync(userId, operatorId, request);
+            var response = await _service.Equipment.SubmitVettingAsync(Guid.Parse(userId), operatorId, request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -564,7 +564,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.ApproveBookingAsync(userId, bookingId);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.ApproveBookingAsync(supplierId, bookingId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -580,7 +581,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.DeclineBookingAsync(userId, bookingId, request);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.DeclineBookingAsync(supplierId, bookingId, request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -620,7 +622,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.DispatchBookingAsync(userId, bookingId);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.DispatchBookingAsync(supplierId, bookingId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -681,7 +684,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.TriggerInsuranceAsync(userId, bookingId, request.Type);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.TriggerInsuranceAsync(supplierId, bookingId, request.Type);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -717,7 +721,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.SiteArrivalSignOffAsync(userId, bookingId);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.SiteArrivalSignOffAsync(supplierId, bookingId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -740,7 +745,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.SubmitDailyCheckAsync(userId, bookingId, request);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.SubmitDailyCheckAsync(supplierId, bookingId, request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -866,7 +872,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.GetAllSupplierDisputesAsync(userId);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.GetAllSupplierDisputesAsync(supplierId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -887,7 +894,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.GetWalletBalanceAsync(userId);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.GetWalletBalanceAsync(supplierId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -910,7 +918,8 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.RequestWithdrawalAsync(userId, request);
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.RequestWithdrawalAsync(supplierId, request);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -930,7 +939,9 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.GetWalletTransactionsAsync(userId);
+
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.GetWalletTransactionsAsync(supplierId);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -951,7 +962,9 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.GetDashboardStatsAsync(userId);
+
+            var supplierId = Guid.Parse(userId);
+            var response = await _service.Equipment.GetDashboardStatsAsync(supplierId);
             return StatusCode(response.StatusCode, response);
         }
 

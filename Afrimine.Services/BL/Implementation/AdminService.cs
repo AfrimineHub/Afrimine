@@ -122,7 +122,7 @@ namespace Afrimine.Services.BL.Implementation
             var (items, total) = await _admin.GetUsersAsync(
                 query.Q, query.Role, query.KycStatus, query.AccountStatus, query.Page, query.PageSize);
 
-            var userIds = items.Select(u => u.Id).ToList();
+            var userIds = items.Select(u => Guid.Parse(u.Id)).ToList();
             var profiles = await _repository.VendorProfile.GetByUserIdsAsync(userIds);
             var profileMap = profiles.ToDictionary(x => x.UserId, x => x);
 
@@ -399,7 +399,13 @@ namespace Afrimine.Services.BL.Implementation
             AdminWithdrawalQueryDto query)
         {
             var (items, total) = await _admin.GetWithdrawalsAsync(query.Q, query.Status, query.Page, query.PageSize);
-            var vendorIds = items.Select(x => x.VendorId).Distinct().ToList();
+
+            //var vendorIds = items.Select(x => Guid.Parse(x.VendorId)).Distinct().ToList();
+            var vendorIds = items.Where(x => !string.IsNullOrWhiteSpace(x.VendorId))
+                .Select(x => Guid.Parse(x.VendorId))
+                .Distinct()
+                .ToList();
+
             var profiles = await _repository.VendorProfile.GetByUserIdsAsync(vendorIds);
             var profileMap = profiles.ToDictionary(x => x.UserId, x => x);
 

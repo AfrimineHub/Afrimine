@@ -17,10 +17,10 @@ namespace Afrimine.Repository
         public async Task CreateSupplierProfileAsync(SupplierProfile profile) =>
             await _context.Set<SupplierProfile>().AddAsync(profile);
 
-        public async Task<SupplierProfile?> GetSupplierProfileAsync(string userId) =>
+        public async Task<SupplierProfile?> GetSupplierProfileAsync(Guid supplierId) =>
             await _context.Set<SupplierProfile>()
                 .Include(x => x.User)
-                .FirstOrDefaultAsync(x => x.UserId == userId);
+                .FirstOrDefaultAsync(x => x.Id == supplierId);
 
         public void UpdateSupplierProfile(SupplierProfile profile) =>
             _context.Set<SupplierProfile>().Update(profile);
@@ -33,15 +33,18 @@ namespace Afrimine.Repository
                 .Include(x => x.Operators).ThenInclude(ao => ao.Operator)
                 .FirstOrDefaultAsync(x => x.Id == assetId && !x.IsDeleted);
 
-        public async Task<IEnumerable<Asset>> GetAssetsBySupplierAsync(string supplierId) =>
+        public async Task<IEnumerable<Asset>> GetAssetsBySupplierAsync(Guid supplierId) =>
             await _context.Set<Asset>()
                 .Where(x => x.SupplierId == supplierId && !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
+        public async Task<SupplierProfile?> GetSupplierProfileByUserIdAsync(string userId)
+            => await _context.Set<SupplierProfile>()
+            .FirstOrDefaultAsync(s => s.UserId == userId);
 
         public void UpdateAsset(Asset asset) => _context.Set<Asset>().Update(asset);
 
-        public async Task<int> CountAssetsAsync(string supplierId) =>
+        public async Task<int> CountAssetsAsync(Guid supplierId) =>
             await _context.Set<Asset>().CountAsync(x => x.SupplierId == supplierId && !x.IsDeleted);
 
         public async Task CreateOperatorAsync(Operator op) =>
@@ -52,7 +55,7 @@ namespace Afrimine.Repository
                 .Include(x => x.Guarantors)
                 .FirstOrDefaultAsync(x => x.Id == operatorId && !x.IsDeleted);
 
-        public async Task<IEnumerable<Operator>> GetOperatorsBySupplierAsync(string supplierId) =>
+        public async Task<IEnumerable<Operator>> GetOperatorsBySupplierAsync(Guid supplierId) =>
             await _context.Set<Operator>()
                 .Include(x => x.Guarantors)
                 .Where(x => x.SupplierId == supplierId && !x.IsDeleted)
@@ -82,11 +85,13 @@ namespace Afrimine.Repository
 
         public async Task<IEnumerable<Booking>> GetBookingsAsync(string userId, BookingStatus? status)
         {
+            var supplierId = Guid.Parse(userId);
+
             IQueryable<Booking> query = _context.Set<Booking>()
                 .Include(x => x.Asset)
                 .Include(x => x.Miner)
                 .Include(x => x.Supplier)
-                .Where(x => (x.MinerId == userId || x.SupplierId == userId) && !x.IsDeleted);
+                .Where(x => (x.MinerId == userId || x.SupplierId == supplierId) && !x.IsDeleted);
 
             if (status.HasValue)
                 query = query.Where(x => x.Status == status.Value);
@@ -100,7 +105,7 @@ namespace Afrimine.Repository
 
         public void UpdateBooking(Booking booking) => _context.Set<Booking>().Update(booking);
 
-        public async Task<int> CountActiveBookingsAsync(string supplierId) =>
+        public async Task<int> CountActiveBookingsAsync(Guid supplierId) =>
             await _context.Set<Booking>()
                 .CountAsync(x => x.SupplierId == supplierId
                     && x.Status == BookingStatus.Active && !x.IsDeleted);
@@ -117,7 +122,7 @@ namespace Afrimine.Repository
                 .Where(x => x.BookingId == bookingId)
                 .OrderByDescending(x => x.CreatedAt).ToListAsync();
 
-        public async Task<IEnumerable<BookingDispute>> GetSupplierDisputesAsync(string supplierId) =>
+        public async Task<IEnumerable<BookingDispute>> GetSupplierDisputesAsync(Guid supplierId) =>
             await _context.Set<BookingDispute>()
                 .Include(x => x.Booking).ThenInclude(b => b.Asset)
                 .Include(x => x.RaisedBy)
@@ -127,7 +132,7 @@ namespace Afrimine.Repository
         public async Task CreateWalletAsync(SupplierWallet wallet) =>
             await _context.Set<SupplierWallet>().AddAsync(wallet);
 
-        public async Task<SupplierWallet?> GetWalletAsync(string supplierId) =>
+        public async Task<SupplierWallet?> GetWalletAsync(Guid supplierId) =>
             await _context.Set<SupplierWallet>()
                 .FirstOrDefaultAsync(x => x.SupplierId == supplierId);
 
@@ -137,7 +142,7 @@ namespace Afrimine.Repository
         public async Task AddWalletTransactionAsync(WalletTransaction transaction) =>
             await _context.Set<WalletTransaction>().AddAsync(transaction);
 
-        public async Task<IEnumerable<WalletTransaction>> GetWalletTransactionsAsync(string supplierId) =>
+        public async Task<IEnumerable<WalletTransaction>> GetWalletTransactionsAsync(Guid supplierId) =>
             await _context.Set<WalletTransaction>()
                 .Include(x => x.Wallet)
                 .Where(x => x.Wallet.SupplierId == supplierId)
@@ -147,6 +152,7 @@ namespace Afrimine.Repository
         {
             IQueryable<Asset> query = _context.Set<Asset>()
                 .Include(x => x.Supplier)
+                //.Include(x => x.Supp)
                 .Where(x => !x.IsDeleted);
 
             if (availableOnly)
@@ -162,6 +168,18 @@ namespace Afrimine.Repository
 
             if (maxDailyRate.HasValue)
                 query = query.Where(x => x.DailyRentalRate <= maxDailyRate.Value);
+
+            // Filter by location against supplier profile city
+            if (!string.IsNullOrWhiteSpace(location))
+            {
+                var supplierIds = await _context.Set<SupplierProfile>()
+                    .Where(p => p.PrimaryBaseCity!.Contains(location)
+                             || p.YardAddress!.Contains(location))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                query = query.Where(x => supplierIds.Contains(x.SupplierId));
+            }
 
             var total = await query.CountAsync();
             var items = await query

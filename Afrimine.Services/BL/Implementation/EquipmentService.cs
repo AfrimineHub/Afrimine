@@ -77,10 +77,9 @@ namespace Afrimine.Services.BL.Implementation
         //    return ApiResponse<string>.Ok("Supplier registered successfully. Please verify your phone number.");
         //}
 
-        public async Task<ApiResponse<SupplierProfileResponseDto>> UpdateProfileAsync(
-            string userId, SupplierProfileUpdateDto request)
+        public async Task<ApiResponse<SupplierProfileResponseDto>> UpdateProfileAsync(string userId, SupplierProfileUpdateDto request)
         {
-            var profile = await _equipment.GetSupplierProfileAsync(userId);
+            var profile = await _equipment.GetSupplierProfileAsync(Guid.Parse(userId));
             if (profile is null) return ApiResponse<SupplierProfileResponseDto>.Fail("Profile not found.", 404);
 
             if (request.CompanyName is not null) profile.CompanyName = request.CompanyName;
@@ -97,7 +96,7 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<string>> UpdateLocationAsync(string userId, SupplierLocationDto request)
         {
-            var profile = await _equipment.GetSupplierProfileAsync(userId);
+            var profile = await _equipment.GetSupplierProfileAsync(Guid.Parse(userId));
             if (profile is null) return ApiResponse<string>.Fail("Profile not found.", 404);
 
             profile.PrimaryBaseCity = request.PrimaryBaseCity;
@@ -115,7 +114,7 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<string>> UploadDocumentAsync(string userId, SupplierDocumentUploadDto request)
         {
-            var profile = await _equipment.GetSupplierProfileAsync(userId);
+            var profile = await _equipment.GetSupplierProfileAsync(Guid.Parse(userId));
             if (profile is null) return ApiResponse<string>.Fail("Profile not found.", 404);
 
             if (!string.IsNullOrWhiteSpace(profile.CacCertificatePublicId))
@@ -138,7 +137,7 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<string>> SubmitForVerificationAsync(string userId)
         {
-            var profile = await _equipment.GetSupplierProfileAsync(userId);
+            var profile = await _equipment.GetSupplierProfileAsync(Guid.Parse(userId));
             if (profile is null) return ApiResponse<string>.Fail("Profile not found.", 404);
 
             if (profile.OnboardingStep < 4)
@@ -157,7 +156,7 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<SupplierStatusDto>> GetStatusAsync(string userId)
         {
-            var profile = await _equipment.GetSupplierProfileAsync(userId);
+            var profile = await _equipment.GetSupplierProfileAsync(Guid.Parse(userId));
             if (profile is null) return ApiResponse<SupplierStatusDto>.Fail("Profile not found.", 404);
 
             return ApiResponse<SupplierStatusDto>.Ok(new SupplierStatusDto
@@ -171,13 +170,13 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<SupplierProfileResponseDto>> GetProfileAsync(string userId)
         {
-            var profile = await _equipment.GetSupplierProfileAsync(userId);
+            var profile = await _equipment.GetSupplierProfileAsync(Guid.Parse(userId));
             if (profile is null) return ApiResponse<SupplierProfileResponseDto>.Fail("Profile not found.", 404);
             return ApiResponse<SupplierProfileResponseDto>.Ok(MapToSupplierProfileDto(profile));
         }
 
         // ── Assets ────────────────────────────────────────────────────────────
-        public async Task<ApiResponse<AssetResponseDto>> CreateAssetAsync(string supplierId, CreateAssetDto request)
+        public async Task<ApiResponse<AssetResponseDto>> CreateAssetAsync(Guid supplierId, CreateAssetDto request)
         {
             var asset = new Asset
             {
@@ -199,22 +198,28 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<AssetResponseDto>.Ok(MapToAssetDto(asset), 201, "Asset created.");
         }
 
-        public async Task<ApiResponse<IEnumerable<AssetResponseDto>>> GetAssetsAsync(string supplierId)
+        public async Task<ApiResponse<IEnumerable<AssetResponseDto>>> GetAssetsAsync(Guid supplierId)
         {
             var assets = await _equipment.GetAssetsBySupplierAsync(supplierId);
             return ApiResponse<IEnumerable<AssetResponseDto>>.Ok(assets.Select(MapToAssetDto));
         }
 
-        public async Task<ApiResponse<AssetResponseDto>> GetAssetAsync(string supplierId, Guid assetId)
+        public async Task<ApiResponse<AssetResponseDto>> GetAssetAsync(Guid userId, Guid assetId)
         {
+            var supplierId = userId;   // JWT userId is the same Guid string
+
             var asset = await _equipment.GetAssetAsync(assetId);
-            if (asset is null) return ApiResponse<AssetResponseDto>.Fail("Asset not found.", 404);
-            if (asset.SupplierId != supplierId) return ApiResponse<AssetResponseDto>.Fail("Access denied.", 403);
+            if (asset is null)
+                return ApiResponse<AssetResponseDto>.Fail("Asset not found.", 404);
+
+            if (asset.SupplierId != supplierId)
+                return ApiResponse<AssetResponseDto>.Fail("Access denied.", 403);
+
             return ApiResponse<AssetResponseDto>.Ok(MapToAssetDto(asset));
         }
 
         public async Task<ApiResponse<AssetResponseDto>> UpdateAssetAsync(
-            string supplierId, Guid assetId, UpdateAssetDto request)
+            Guid supplierId, Guid assetId, UpdateAssetDto request)
         {
             var asset = await _equipment.GetAssetAsync(assetId);
             if (asset is null) return ApiResponse<AssetResponseDto>.Fail("Asset not found.", 404);
@@ -235,7 +240,7 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<AssetResponseDto>.Ok(MapToAssetDto(asset));
         }
 
-        public async Task<ApiResponse<string>> DeleteAssetAsync(string supplierId, Guid assetId)
+        public async Task<ApiResponse<string>> DeleteAssetAsync(Guid supplierId, Guid assetId)
         {
             var asset = await _equipment.GetAssetAsync(assetId);
             if (asset is null) return ApiResponse<string>.Fail("Asset not found.", 404);
@@ -250,7 +255,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         public async Task<ApiResponse<AssetResponseDto>> UploadAssetPhotosAsync(
-            string supplierId, Guid assetId, AssetPhotoUploadDto request)
+            Guid supplierId, Guid assetId, AssetPhotoUploadDto request)
         {
             var asset = await _equipment.GetAssetAsync(assetId);
             if (asset is null) return ApiResponse<AssetResponseDto>.Fail("Asset not found.", 404);
@@ -320,7 +325,7 @@ namespace Afrimine.Services.BL.Implementation
 
         // ── Operators ─────────────────────────────────────────────────────────
         public async Task<ApiResponse<OperatorResponseDto>> CreateOperatorAsync(
-            string supplierId, CreateOperatorDto request)
+            Guid supplierId, CreateOperatorDto request)
         {
             var op = new Operator
             {
@@ -344,14 +349,14 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<OperatorResponseDto>.Ok(MapToOperatorDto(op), 201, "Operator added.");
         }
 
-        public async Task<ApiResponse<IEnumerable<OperatorResponseDto>>> GetOperatorsAsync(string supplierId)
+        public async Task<ApiResponse<IEnumerable<OperatorResponseDto>>> GetOperatorsAsync(Guid supplierId)
         {
             var operators = await _equipment.GetOperatorsBySupplierAsync(supplierId);
             return ApiResponse<IEnumerable<OperatorResponseDto>>.Ok(operators.Select(MapToOperatorDto));
         }
 
         public async Task<ApiResponse<OperatorResponseDto>> UpdateOperatorAsync(
-            string supplierId, Guid operatorId, CreateOperatorDto request)
+            Guid supplierId, Guid operatorId, CreateOperatorDto request)
         {
             var op = await _equipment.GetOperatorAsync(operatorId);
             if (op is null) return ApiResponse<OperatorResponseDto>.Fail("Operator not found.", 404);
@@ -370,7 +375,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         public async Task<ApiResponse<string>> AssignOperatorToAssetAsync(
-            string supplierId, Guid assetId, Guid operatorId)
+            Guid supplierId, Guid assetId, Guid operatorId)
         {
             var asset = await _equipment.GetAssetAsync(assetId);
             if (asset is null || asset.SupplierId != supplierId)
@@ -392,7 +397,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         public async Task<ApiResponse<string>> AddGuarantorAsync(
-            string supplierId, Guid operatorId, CreateGuarantorDto request)
+            Guid supplierId, Guid operatorId, CreateGuarantorDto request)
         {
             var op = await _equipment.GetOperatorAsync(operatorId);
             if (op is null || op.SupplierId != supplierId)
@@ -417,7 +422,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         public async Task<ApiResponse<string>> SubmitVettingAsync(
-            string supplierId, Guid operatorId, VettingSubmitDto request)
+            Guid supplierId, Guid operatorId, VettingSubmitDto request)
         {
             var op = await _equipment.GetOperatorAsync(operatorId);
             if (op is null || op.SupplierId != supplierId)
@@ -588,15 +593,16 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<BookingDetailDto>> GetBookingDetailAsync(string userId, Guid bookingId)
         {
+            var supplierId = Guid.Parse(userId);
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<BookingDetailDto>.Fail("Booking not found.", 404);
-            if (booking.MinerId != userId && booking.SupplierId != userId)
+            if (booking.MinerId != userId && booking.SupplierId != supplierId)
                 return ApiResponse<BookingDetailDto>.Fail("Access denied.", 403);
 
             return ApiResponse<BookingDetailDto>.Ok(MapToBookingDetailDto(booking));
         }
 
-        public async Task<ApiResponse<BookingResponseDto>> ApproveBookingAsync(string supplierId, Guid bookingId)
+        public async Task<ApiResponse<BookingResponseDto>> ApproveBookingAsync(Guid supplierId, Guid bookingId)
         {
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<BookingResponseDto>.Fail("Booking not found.", 404);
@@ -621,7 +627,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         public async Task<ApiResponse<string>> DeclineBookingAsync(
-            string supplierId, Guid bookingId, DeclineBookingDto request)
+            Guid supplierId, Guid bookingId, DeclineBookingDto request)
         {
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
@@ -637,7 +643,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         // ── Logistics & Milestones ─────────────────────────────────────────────
-        public async Task<ApiResponse<string>> DispatchBookingAsync(string supplierId, Guid bookingId)
+        public async Task<ApiResponse<string>> DispatchBookingAsync(Guid supplierId, Guid bookingId)
         {
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
@@ -694,7 +700,7 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<TrackingDto>.Ok(tracking ?? new TrackingDto { Status = "No tracking data available" });
         }
 
-        public async Task<ApiResponse<string>> TriggerInsuranceAsync(string supplierId, Guid bookingId, string type)
+        public async Task<ApiResponse<string>> TriggerInsuranceAsync(Guid supplierId, Guid bookingId, string type)
         {
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
@@ -719,11 +725,12 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok($"{type.ToUpper()} Insurance activated.");
         }
 
-        public async Task<ApiResponse<string>> SiteArrivalSignOffAsync(string userId, Guid bookingId)
+        public async Task<ApiResponse<string>> SiteArrivalSignOffAsync(Guid supplierId, Guid bookingId)
         {
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
-            if (booking.SupplierId != userId && booking.MinerId != userId)
+
+            if (booking.SupplierId != supplierId)
                 return ApiResponse<string>.Fail("Access denied.", 403);
 
             booking.LogisticsStatus = LogisticsStatus.Arrived;
@@ -739,7 +746,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         public async Task<ApiResponse<string>> SubmitDailyCheckAsync(
-            string userId, Guid bookingId, DailyCheckDto request)
+Guid supplierId, Guid bookingId, DailyCheckDto request)
         {
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
@@ -797,7 +804,9 @@ namespace Afrimine.Services.BL.Implementation
         {
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
-            if (booking.SupplierId != userId && booking.MinerId != userId)
+
+            var supplierId = Guid.Parse(userId);
+            if (booking.SupplierId != supplierId && booking.MinerId != userId)
                 return ApiResponse<string>.Fail("Access denied.", 403);
 
             booking.Status = BookingStatus.Completed;
@@ -840,7 +849,10 @@ namespace Afrimine.Services.BL.Implementation
         {
             var booking = await _equipment.GetBookingDetailAsync(bookingId);
             if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
-            if (booking.MinerId != userId && booking.SupplierId != userId)
+
+             var supplierId = Guid.Parse(userId);
+
+            if (booking.MinerId != userId && booking.SupplierId != supplierId)
                 return ApiResponse<string>.Fail("Access denied.", 403);
 
             var dispute = new BookingDispute
@@ -872,14 +884,14 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<IEnumerable<BookingDisputeResponseDto>>.Ok(disputes.Select(MapToDisputeDto));
         }
 
-        public async Task<ApiResponse<IEnumerable<BookingDisputeResponseDto>>> GetAllSupplierDisputesAsync(string supplierId)
+        public async Task<ApiResponse<IEnumerable<BookingDisputeResponseDto>>> GetAllSupplierDisputesAsync(Guid supplierId)
         {
             var disputes = await _equipment.GetSupplierDisputesAsync(supplierId);
             return ApiResponse<IEnumerable<BookingDisputeResponseDto>>.Ok(disputes.Select(MapToDisputeDto));
         }
 
         // ── Wallet ────────────────────────────────────────────────────────────
-        public async Task<ApiResponse<WalletBalanceDto>> GetWalletBalanceAsync(string supplierId)
+        public async Task<ApiResponse<WalletBalanceDto>> GetWalletBalanceAsync(Guid supplierId)
         {
             var wallet = await _equipment.GetWalletAsync(supplierId);
             if (wallet is null) return ApiResponse<WalletBalanceDto>.Fail("Wallet not found.", 404);
@@ -892,7 +904,7 @@ namespace Afrimine.Services.BL.Implementation
             });
         }
 
-        public async Task<ApiResponse<string>> RequestWithdrawalAsync(string supplierId, WithdrawalRequestDto request)
+        public async Task<ApiResponse<string>> RequestWithdrawalAsync(Guid supplierId, WithdrawalRequestDto request)
         {
             var wallet = await _equipment.GetWalletAsync(supplierId);
             if (wallet is null) return ApiResponse<string>.Fail("Wallet not found.", 404);
@@ -914,7 +926,7 @@ namespace Afrimine.Services.BL.Implementation
             // Also create a payout record
             await _repository.Payout.Create(new Payout
             {
-                VendorId = supplierId,
+                VendorId = supplierId.ToString(),
                 Amount = request.Amount,
                 Currency = request.Currency,
                 Status = PayoutStatus.Pending
@@ -924,7 +936,7 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("Withdrawal request submitted. Processing within 24-48 hours.");
         }
 
-        public async Task<ApiResponse<IEnumerable<WalletTransactionDto>>> GetWalletTransactionsAsync(string supplierId)
+        public async Task<ApiResponse<IEnumerable<WalletTransactionDto>>> GetWalletTransactionsAsync(Guid supplierId)
         {
             var transactions = await _equipment.GetWalletTransactionsAsync(supplierId);
             return ApiResponse<IEnumerable<WalletTransactionDto>>.Ok(transactions.Select(t => new WalletTransactionDto
@@ -940,7 +952,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         // ── Dashboard ─────────────────────────────────────────────────────────
-        public async Task<ApiResponse<SupplierDashboardStatsDto>> GetDashboardStatsAsync(string supplierId)
+        public async Task<ApiResponse<SupplierDashboardStatsDto>> GetDashboardStatsAsync(Guid supplierId)
         {
             var totalMachines = await _equipment.CountAssetsAsync(supplierId);
             var activeLeases = await _equipment.CountActiveBookingsAsync(supplierId);
@@ -1023,18 +1035,41 @@ namespace Afrimine.Services.BL.Implementation
             }
         }
 
-        public async Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly,int page, int pageSize)
+        public async Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(
+    string? q, MachineType? machineType, string? location,
+    decimal? maxDailyRate, bool availableOnly,
+    int page, int pageSize)
         {
-            var (items, total) = await _equipment.SearchAssetsAsync(q, machineType, location, maxDailyRate, availableOnly, page, pageSize);
+            var (items, total) = await _equipment.SearchAssetsAsync(
+                q, machineType, location, maxDailyRate, availableOnly, page, pageSize);
+
+            var assetList = items.ToList();
+
+            // Fetch supplier profiles for location data
+            var supplierIds = assetList.Select(a => a.SupplierId).Distinct().ToList();
+            var profiles = await _repository.VendorProfile.GetByUserIdsAsync(supplierIds);
+            var profileMap = profiles.ToDictionary(p => p.Id, p => p);
+
+            var dtos = assetList.Select(a =>
+            {
+                var dto = MapToAssetDto(a);
+                if (profileMap.TryGetValue(a.SupplierId, out var profile))
+                {
+                    dto.SupplierCity = profile.OfficeAddress;
+                    //dto.SupplierYardAddress = profile.YardAddress;
+                }
+                return dto;
+            });
 
             return ApiResponse<PagedResultDto<AssetResponseDto>>.Ok(new PagedResultDto<AssetResponseDto>
             {
-                Items = items.Select(MapToAssetDto),
+                Items = dtos,
                 TotalCount = total,
                 Page = page,
                 PageSize = pageSize
             });
         }
+
 
         // ── Private helpers ───────────────────────────────────────────────────
         private async Task ReleaseMilestoneAsync(Booking booking, int milestoneNumber)
@@ -1142,7 +1177,7 @@ namespace Afrimine.Services.BL.Implementation
             AssetId = b.AssetId,
             AssetName = b.Asset != null ? $"{b.Asset.Brand} {b.Asset.Model}" : string.Empty,
             MinerName = b.Miner?.FullName ?? string.Empty,
-            SupplierName = b.Supplier?.FullName ?? string.Empty,
+            SupplierName = b.Supplier?.CompanyName ?? string.Empty,
             StartDate = b.StartDate,
             EndDate = b.EndDate,
             TotalDays = b.TotalDays,
@@ -1167,7 +1202,7 @@ namespace Afrimine.Services.BL.Implementation
                 AssetId = b.AssetId,
                 AssetName = b.Asset != null ? $"{b.Asset.Brand} {b.Asset.Model}" : string.Empty,
                 MinerName = b.Miner?.FullName ?? string.Empty,
-                SupplierName = b.Supplier?.FullName ?? string.Empty,
+                SupplierName = b.Supplier?.CompanyName ?? string.Empty,
                 StartDate = b.StartDate,
                 EndDate = b.EndDate,
                 TotalDays = b.TotalDays,
