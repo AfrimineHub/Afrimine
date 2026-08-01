@@ -2,6 +2,7 @@
 using Afrimine.Model.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 namespace Afrimine.Migrations
 {
@@ -160,12 +161,17 @@ namespace Afrimine.Migrations
                 .HasOne(x => x.Vendor).WithMany()
                 .HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<SupplierProfile>()
-    .HasOne(x => x.User).WithMany()
-    .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+                .HasOne(x => x.User).WithMany()
+                .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+
+            //builder.Entity<Asset>()
+            //    .HasOne(x => x.Supplier).WithMany()
+            //    .HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Asset>()
-                .HasOne(x => x.Supplier).WithMany()
-                .HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+                .HasOne(a => a.Supplier)
+                .WithMany()
+                .HasForeignKey(a => a.SupplierId);
 
             builder.Entity<Operator>()
                 .HasOne(x => x.Supplier).WithMany()
@@ -202,6 +208,11 @@ namespace Afrimine.Migrations
             builder.Entity<Guarantor>()
                 .HasOne(x => x.Operator).WithMany(x => x.Guarantors)
                 .HasForeignKey(x => x.OperatorId).OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<SupplierProfile>(entity =>
+            {
+                entity.Property(e => e.Id).ValueGeneratedNever();
+            });
 
             base.OnModelCreating(builder);
         }

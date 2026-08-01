@@ -4,8 +4,8 @@ namespace Afrimine.Model.Entities
 {
     public class Asset : BaseEntity
     {
-        public string SupplierId { get; set; } = string.Empty;
-        public User Supplier { get; set; } = null!;
+        public Guid SupplierId { get; set; } = Guid.Empty;
+        public SupplierProfile Supplier { get; set; } = null!;
         public MachineType MachineType { get; set; }
         public string Brand { get; set; } = string.Empty;
         public string Model { get; set; } = string.Empty;

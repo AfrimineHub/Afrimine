@@ -121,6 +121,8 @@ namespace Afrimine.Services.DTOs
             public string? SidePhotoUrl { get; set; }
             public string? SerialPlatePhotoUrl { get; set; }
             public string? Description { get; set; }
+            public string? SupplierCity { get; set; }
+            public string? SupplierYardAddress { get; set; }
             public DateTime CreatedAt { get; set; }
         }
 
