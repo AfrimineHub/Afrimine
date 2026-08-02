@@ -6,6 +6,7 @@ using Afrimine.Shared.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using static Afrimine.Services.DTOs.SupplierDto;
 
 namespace Afrimine.Api.Controllers.V1
@@ -224,13 +225,18 @@ namespace Afrimine.Api.Controllers.V1
         /// Vendors can only access their own machines. Buyers can view any available machine.
         /// Returns 403 if a vendor tries to access another vendor's machine.
         /// </remarks>
+
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("assets/{assetId:guid}")]
         public async Task<IActionResult> GetAsset(Guid assetId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
-            var response = await _service.Equipment.GetAssetAsync(Guid.Parse(userId), assetId);
+
+            var role = HttpContext.User.FindFirst(ClaimTypes.Role)?.Value
+                ?? string.Empty;
+
+            var response = await _service.Equipment.GetAssetAsync(Guid.Parse(userId), role, assetId);
             return StatusCode(response.StatusCode, response);
         }
 
