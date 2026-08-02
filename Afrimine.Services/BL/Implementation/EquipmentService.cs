@@ -204,15 +204,20 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<IEnumerable<AssetResponseDto>>.Ok(assets.Select(MapToAssetDto));
         }
 
-        public async Task<ApiResponse<AssetResponseDto>> GetAssetAsync(Guid userId, Guid assetId)
+        public async Task<ApiResponse<AssetResponseDto>> GetAssetAsync(Guid userId, string role, Guid assetId)
         {
-            var supplierId = userId;   // JWT userId is the same Guid string
-
             var asset = await _equipment.GetAssetAsync(assetId);
             if (asset is null)
                 return ApiResponse<AssetResponseDto>.Fail("Asset not found.", 404);
 
-            if (asset.SupplierId != supplierId)
+            // Buyers can view any available asset
+            if (role.Equals(RoleType.Buyer.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                return ApiResponse<AssetResponseDto>.Ok(MapToAssetDto(asset));
+            }
+
+            // Vendors can only view their own assets
+            if (asset.SupplierId != userId)
                 return ApiResponse<AssetResponseDto>.Fail("Access denied.", 403);
 
             return ApiResponse<AssetResponseDto>.Ok(MapToAssetDto(asset));

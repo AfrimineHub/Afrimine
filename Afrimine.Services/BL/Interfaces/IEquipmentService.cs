@@ -20,7 +20,7 @@ namespace Afrimine.Services.BL.Interfaces
         // Assets
         Task<ApiResponse<AssetResponseDto>> CreateAssetAsync(Guid supplierId, CreateAssetDto request);
         Task<ApiResponse<IEnumerable<AssetResponseDto>>> GetAssetsAsync(Guid supplierId);
-        Task<ApiResponse<AssetResponseDto>> GetAssetAsync(Guid supplierId, Guid assetId);
+        Task<ApiResponse<AssetResponseDto>> GetAssetAsync(Guid supplierId,string role, Guid assetId);
         Task<ApiResponse<AssetResponseDto>> UpdateAssetAsync(Guid supplierId, Guid assetId, UpdateAssetDto request);
         Task<ApiResponse<string>> DeleteAssetAsync(Guid supplierId, Guid assetId);
         Task<ApiResponse<AssetResponseDto>> UploadAssetPhotosAsync(Guid supplierId, Guid assetId, AssetPhotoUploadDto request);
