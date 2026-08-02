@@ -1,4 +1,5 @@
-﻿using Afrimine.Model.Enums;
+﻿using Afrimine.Model.Entities;
+using Afrimine.Model.Enums;
 using Afrimine.Repository;
 using Afrimine.Services.BL.Interfaces;
 using Afrimine.Services.DTOs;
@@ -539,6 +540,32 @@ namespace Afrimine.Services.BL.Implementation
             _repository.VendorProfile.Update(profile);
             await _repository.SaveAsync();
             return ApiResponse<string>.Ok("KYC rejected.");
+        }
+
+        public async Task<ApiResponse<string>> CreateAdminAsync(CreateAdminDto request)
+        {
+            var existing = await _userManager.FindByEmailAsync(request.Email);
+            if (existing is not null)
+                return ApiResponse<string>.Fail("Email already registered.", 409);
+
+            var admin = new User
+            {
+                FullName = request.FullName,
+                UserName = request.Email,
+                Email = request.Email,
+                PhoneNumber = "",
+                EmailConfirmed = true,
+                Type = RoleType.SuperAdmin,
+                Status = AccountStatus.Active
+            };
+
+            var result = await _userManager.CreateAsync(admin, request.Password);
+            if (!result.Succeeded)
+                return ApiResponse<string>.Fail(
+                    string.Join(", ", result.Errors.Select(e => e.Description)), 400);
+
+            await _userManager.AddToRoleAsync(admin, "SuperAdmin");
+            return ApiResponse<string>.Ok("Admin created successfully.");
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────

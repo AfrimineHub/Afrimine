@@ -38,5 +38,6 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<AdminKycDetailDto>> GetKycDetailAsync(Guid profileId);
         Task<ApiResponse<string>> ApproveKycAsync(Guid profileId);
         Task<ApiResponse<string>> RejectKycAsync(Guid profileId, AdminKycActionDto request);
+        Task<ApiResponse<string>> CreateAdminAsync(CreateAdminDto request);
     }
 }
