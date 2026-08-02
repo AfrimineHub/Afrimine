@@ -318,5 +318,20 @@ namespace Afrimine.Api.Controllers
             var response = await _service.Admin.RejectKycAsync(submissionId, request);
             return StatusCode(response.StatusCode, response);
         }
+
+        /// <summary>Create first admin account — one-time setup, remove after use</summary>
+        /// <remarks>
+        /// ⚠️ Remove this endpoint immediately after creating your first admin.
+        /// Requires setup key in query param: `?setupKey=AFRIMINE_SETUP_2026`
+        /// </remarks>
+        //[AllowAnonymous]
+        //[HttpPost("setup-admin")]
+        //public async Task<IActionResult> SetupAdmin([FromBody] CreateAdminDto request,
+        //    [FromQuery] string setupKey)
+        //{
+        //    if (setupKey != "AFRIMINE_SETUP_2026") return Unauthorized();
+        //    var response = await _service.Admin.CreateAdminAsync(request);
+        //    return StatusCode(response.StatusCode, response);
+        //}
     }
 }
