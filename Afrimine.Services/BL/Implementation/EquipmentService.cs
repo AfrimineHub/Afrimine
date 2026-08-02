@@ -490,7 +490,7 @@ namespace Afrimine.Services.BL.Implementation
             var milestone2 = Math.Round(supplierPayout * 0.40m, 2);
             var milestone3 = supplierPayout - milestone1 - milestone2;
 
-            var txRef = $"AFRIMINE-{Guid.NewGuid():N[..12].ToUpper()}";
+            var txRef = $"AFRIMINE-{Guid.NewGuid().ToString("N")[..12].ToUpperInvariant()}";
 
             // Get supplier profile for bank details
             var supplierProfile = await _equipment.GetSupplierProfileAsync(asset.SupplierId);
