@@ -38,7 +38,7 @@ namespace Afrimine.Repository
         Task<Payout?> GetPayoutByIdAsync(Guid payoutId);
 
         // KYC
-        Task<(IEnumerable<VendorProfile> Items, int TotalCount)> GetKycQueueAsync(string? q, string? status, int page, int pageSize);
+        Task<(IEnumerable<SupplierProfile> Items, int TotalCount)> GetKycQueueAsync(string? q, string? status, int page, int pageSize);
         Task<VendorProfile?> GetKycDetailAsync(Guid profileId);
 
         // Dashboard helpers

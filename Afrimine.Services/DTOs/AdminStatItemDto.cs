@@ -269,6 +269,7 @@ namespace Afrimine.Services.DTOs
         public string? Country { get; set; }
         public string SubmittedAt { get; set; } = string.Empty;
         public string? Status { get; set; }
+        public string? CompanyName { get; set; }   // from SupplierProfile
     }
 
     public class AdminKycDetailDto
