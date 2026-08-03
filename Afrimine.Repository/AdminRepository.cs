@@ -200,22 +200,36 @@ namespace Afrimine.Repository
                 .FirstOrDefaultAsync(x => x.Id == payoutId && !x.IsDeleted);
 
         // ── KYC ────────────────────────────────────────────────────────────────
-        public async Task<(IEnumerable<VendorProfile> Items, int TotalCount)> GetKycQueueAsync(string? q, string? status, int page, int pageSize)
+        public async Task<(IEnumerable<SupplierProfile> Items, int TotalCount)> GetKycQueueAsync(string? q, string? status, int page, int pageSize)
         {
-            IQueryable<VendorProfile> query = _context.Set<VendorProfile>()
+            IQueryable<SupplierProfile> query = _context.Set<SupplierProfile>()
                 .Include(x => x.User);
 
-            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<KycStatus>(status, true, out var kycEnum))
-                query = query.Where(x => x.KycStatus == kycEnum);
+            if (!string.IsNullOrWhiteSpace(status)
+                && Enum.TryParse<SupplierStatus>(status, true, out var statusEnum))
+            {
+                query = query.Where(x => x.Status == statusEnum);
+            }
             else
-                query = query.Where(x => x.KycStatus == KycStatus.Pending && !x.IsDeleted);
+            {
+                query = query.Where(x => x.Status == SupplierStatus.Pending && !x.IsDeleted);
+            }
 
             if (!string.IsNullOrWhiteSpace(q))
-                query = query.Where(x => x.User.FullName.Contains(q) || x.User.Email!.Contains(q));
+            {
+                query = query.Where(x =>
+                    (x.User.FullName != null && x.User.FullName.Contains(q)) ||
+                    (x.User.Email != null && x.User.Email.Contains(q)) ||
+                    (x.CompanyName != null && x.CompanyName.Contains(q)));
+            }
 
             var total = await query.CountAsync();
-            var items = await query.OrderByDescending(x => x.CreatedAt)
-                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            var items = await query
+                .OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
             return (items, total);
         }
 

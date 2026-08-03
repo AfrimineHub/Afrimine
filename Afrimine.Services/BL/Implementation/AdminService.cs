@@ -470,25 +470,27 @@ namespace Afrimine.Services.BL.Implementation
         // ── KYC ───────────────────────────────────────────────────────────────
         public async Task<ApiResponse<PagedResultDto<AdminKycQueueItemDto>>> GetKycQueueAsync(AdminKycQueryDto query)
         {
-            var (items, total) = await _admin.GetKycQueueAsync(query.Q, query.Status, query.Page, query.PageSize);
-            return ApiResponse<PagedResultDto<AdminKycQueueItemDto>>.Ok(new PagedResultDto<AdminKycQueueItemDto>
-            {
-                Items = items.Select(p => new AdminKycQueueItemDto
+            var (items, total) = await _admin.GetKycQueueAsync(
+                query.Q, query.Status, query.Page, query.PageSize);
+
+            return ApiResponse<PagedResultDto<AdminKycQueueItemDto>>.Ok(
+                new PagedResultDto<AdminKycQueueItemDto>
                 {
-                    Id = p.Id.ToString(),
-                    UserId = p.UserId,
-                    FullName = p.User?.FullName,
-                    Email = p.User?.Email,
-                    Phone = p.User?.PhoneNumber,
-                    DocumentType = p.DocumentType?.ToString(),
-                    Country = p.Country,
-                    SubmittedAt = (p.CreatedAt).ToString("O"),
-                    Status = p.KycStatus.ToString().ToLower()
-                }),
-                TotalCount = total,
-                Page = query.Page,
-                PageSize = query.PageSize
-            });
+                    Items = items.Select(p => new AdminKycQueueItemDto
+                    {
+                        Id = p.Id.ToString(),
+                        UserId = p.UserId,
+                        FullName = p.User?.FullName,
+                        Email = p.User?.Email,
+                        Phone = p.User?.PhoneNumber ?? p.BusinessPhone,
+                        CompanyName = p.CompanyName,
+                        SubmittedAt = p.CreatedAt.ToString("O"),
+                        Status = p.Status.ToString().ToLower()
+                    }),
+                    TotalCount = total,
+                    Page = query.Page,
+                    PageSize = query.PageSize
+                });
         }
 
         public async Task<ApiResponse<AdminKycDetailDto>> GetKycDetailAsync(Guid profileId)
