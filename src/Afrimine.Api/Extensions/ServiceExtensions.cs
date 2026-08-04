@@ -38,7 +38,8 @@ namespace Afrimine.Api.Extensions
                 .AddScoped<IRepositoryManager, RepositoryManager>()
                 .Configure<CloudinaryConfig>(configuration.GetSection("Cloudinary"))
                 .AddScoped<ICloudinaryService, CloudinaryService>()
-                .AddScoped<IAdminRepository, AdminRepository>();
+                .AddScoped<IAdminRepository, AdminRepository>()
+                .AddScoped<ISupplierProfileRepository, SupplierProfileRepository>(); ;
 
             services.AddScoped<IEquipmentRepository, EquipmentRepository>();
             services.AddScoped<IPayscrowService, PayscrowService>();

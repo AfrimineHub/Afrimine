@@ -1040,9 +1040,7 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             }
         }
 
-        public async Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(
-    string? q, MachineType? machineType, string? location,
-    decimal? maxDailyRate, bool availableOnly,
+        public async Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(string? q, MachineType? machineType, string? location,decimal? maxDailyRate, bool availableOnly,
     int page, int pageSize)
         {
             var (items, total) = await _equipment.SearchAssetsAsync(
@@ -1052,7 +1050,7 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
 
             // Fetch supplier profiles for location data
             var supplierIds = assetList.Select(a => a.SupplierId).Distinct().ToList();
-            var profiles = await _repository.VendorProfile.GetByUserIdsAsync(supplierIds);
+            var profiles = await _repository.Profile.GetByIdsAsync(supplierIds);
             var profileMap = profiles.ToDictionary(p => p.Id, p => p);
 
             var dtos = assetList.Select(a =>

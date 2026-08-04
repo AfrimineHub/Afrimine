@@ -39,12 +39,12 @@ namespace Afrimine.Repository
 
         // KYC
         Task<(IEnumerable<SupplierProfile> Items, int TotalCount)> GetKycQueueAsync(string? q, string? status, int page, int pageSize);
-        Task<VendorProfile?> GetKycDetailAsync(Guid profileId);
+        Task<SupplierProfile?> GetKycDetailAsync(Guid profileId);
 
         // Dashboard helpers
         Task<int> CountOpenDisputesAsync();
         Task<IEnumerable<Order>> GetRecentOrdersAsync(int count);
-        Task<IEnumerable<VendorProfile>> GetRecentKycSubmissionsAsync(int count);
+        Task<IEnumerable<SupplierProfile>> GetRecentKycSubmissionsAsync(int count);
         Task<IEnumerable<Dispute>> GetOpenDisputesAsync(int count);
     }
 }
