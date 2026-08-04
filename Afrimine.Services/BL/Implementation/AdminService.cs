@@ -124,7 +124,7 @@ namespace Afrimine.Services.BL.Implementation
                 query.Q, query.Role, query.KycStatus, query.AccountStatus, query.Page, query.PageSize);
 
             var userIds = items.Select(u => Guid.Parse(u.Id)).ToList();
-            var profiles = await _repository.VendorProfile.GetByUserIdsAsync(userIds);
+            var profiles = await _repository.Profile.GetByIdsAsync(userIds);
             var profileMap = profiles.ToDictionary(x => x.UserId, x => x);
 
             return ApiResponse<PagedResultDto<AdminUserListItemDto>>.Ok(new PagedResultDto<AdminUserListItemDto>
@@ -138,7 +138,7 @@ namespace Afrimine.Services.BL.Implementation
                         FullName = u.FullName,
                         Email = u.Email,
                         Role = u.Type.ToString().ToLower(),
-                        KycStatus = profile?.KycStatus.ToString().ToLower() ?? "not_started",
+                        KycStatus = profile?.Status.ToString().ToLower() ?? "not_started",
                         AccountStatus = u.Status.ToString().ToLower(),
                         CreatedAt = u.CreatedOn.ToString("O")
                     };
@@ -407,7 +407,7 @@ namespace Afrimine.Services.BL.Implementation
                 .Distinct()
                 .ToList();
 
-            var profiles = await _repository.VendorProfile.GetByUserIdsAsync(vendorIds);
+            var profiles = await _repository.Profile.GetByIdsAsync(vendorIds);
             var profileMap = profiles.ToDictionary(x => x.UserId, x => x);
 
             return ApiResponse<PagedResultDto<AdminWithdrawalItemDto>>.Ok(new PagedResultDto<AdminWithdrawalItemDto>
@@ -515,8 +515,8 @@ namespace Afrimine.Services.BL.Implementation
                 DocumentFileName = p.DocumentFileName,
                 DocumentFileSizeBytes = p.DocumentFileSizeBytes,
                 DocumentDownloadUrl = p.DocumentUrl,
-                Status = p.KycStatus.ToString().ToLower(),
-                RejectionReason = p.KycRejectionReason
+                Status = p.Status.ToString().ToLower(),
+                RejectionReason = p.RejectionReason
             });
         }
 
@@ -524,10 +524,10 @@ namespace Afrimine.Services.BL.Implementation
         {
             var profile = await _admin.GetKycDetailAsync(profileId);
             if (profile is null) return ApiResponse<string>.Fail("KYC not found.", 404);
-            profile.KycStatus = KycStatus.Verified;
-            profile.KycRejectionReason = null;
+            profile.Status = SupplierStatus.Active;
+            profile.RejectionReason = null;
             profile.UpdatedAt = DateTime.UtcNow;
-            _repository.VendorProfile.Update(profile);
+            _repository.Profile.Update(profile);
             await _repository.SaveAsync();
             return ApiResponse<string>.Ok("KYC approved.");
         }
@@ -536,10 +536,10 @@ namespace Afrimine.Services.BL.Implementation
         {
             var profile = await _admin.GetKycDetailAsync(profileId);
             if (profile is null) return ApiResponse<string>.Fail("KYC not found.", 404);
-            profile.KycStatus = KycStatus.Rejected;
-            profile.KycRejectionReason = request.Reason;
+            profile.Status = SupplierStatus.Rejected;
+            profile.RejectionReason = request.Reason;
             profile.UpdatedAt = DateTime.UtcNow;
-            _repository.VendorProfile.Update(profile);
+            _repository.Profile.Update(profile);
             await _repository.SaveAsync();
             return ApiResponse<string>.Ok("KYC rejected.");
         }

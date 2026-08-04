@@ -58,8 +58,8 @@ namespace Afrimine.Repository
         public IOtpRepository Otp => _otpRepository.Value;
         public ISendEmailRepository SendEmail => _sendEmailRepository.Value;
         public async Task SaveAsync() => await _repositoryContext.SaveChangesAsync();
-        public IVendorProfileRepository VendorProfile =>
-            new VendorProfileRepository(_repositoryContext);
+        public ISupplierProfileRepository Profile =>
+            new SupplierProfileRepository(_repositoryContext);
         public IListingRepository Listing => _listingRepository.Value;
         public ISavedListingRepository SavedListing => _savedListingRepository.Value;
         public INotificationRepository Notification => _notificationRepository.Value;

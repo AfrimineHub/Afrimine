@@ -40,7 +40,7 @@ namespace Afrimine.Repository
             await _context.Users.CountAsync(x => x.Status == AccountStatus.Active);
 
         public async Task<int> CountKycVerifiedAsync() =>
-            await _context.Set<VendorProfile>().CountAsync(x => x.KycStatus == KycStatus.Verified);
+            await _context.Set<SupplierProfile>().CountAsync(x => x.Status == SupplierStatus.Active);
 
         public async Task<int> CountVendorsAsync() =>
             await _context.Users.CountAsync(x => x.Type == RoleType.Vendor);
@@ -233,8 +233,8 @@ namespace Afrimine.Repository
             return (items, total);
         }
 
-        public async Task<VendorProfile?> GetKycDetailAsync(Guid profileId) =>
-            await _context.Set<VendorProfile>()
+        public async Task<SupplierProfile?> GetKycDetailAsync(Guid profileId) =>
+            await _context.Set<SupplierProfile>()
                 .Include(x => x.User)
                 .FirstOrDefaultAsync(x => x.Id == profileId);
 
@@ -248,10 +248,10 @@ namespace Afrimine.Repository
                 .Where(x => !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt).Take(count).ToListAsync();
 
-        public async Task<IEnumerable<VendorProfile>> GetRecentKycSubmissionsAsync(int count) =>
-            await _context.Set<VendorProfile>()
+        public async Task<IEnumerable<SupplierProfile>> GetRecentKycSubmissionsAsync(int count) =>
+            await _context.Set<SupplierProfile>()
                 .Include(x => x.User)
-                .Where(x => x.KycStatus == KycStatus.Pending)
+                .Where(x => x.Status == SupplierStatus.Pending)
                 .OrderByDescending(x => x.CreatedAt).Take(count).ToListAsync();
 
         public async Task<IEnumerable<Dispute>> GetOpenDisputesAsync(int count) =>

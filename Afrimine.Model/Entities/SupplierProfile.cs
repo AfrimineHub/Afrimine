@@ -28,5 +28,25 @@ namespace Afrimine.Model.Entities
         public string? BankCode { get; set; }
         public string? BankAccountNumber { get; set; }
         public string? BankAccountName { get; set; }
+        //kyc fields from vendor model
+        public string? OfficeAddress { get; set; }
+        public string? DateOfBirth { get; set; }
+        public DocumentType? DocumentType { get; set; }
+        public string? DocumentIdNumber { get; set; }
+        public string? DocumentUrl { get; set; }
+        public string? DocumentFileName { get; set; }
+        public string? DocumentPublicId { get; set; }
+        public long? DocumentFileSizeBytes { get; set; }
+        public string? ProfilePhotoUrl { get; set; }
+        public string? Country { get; set; }
+
+        // ── NEW: fields from VendorProfile ──
+        public BusinessType BusinessType { get; set; }
+        public string StateOrRegion { get; set; } = string.Empty;
+        public string? Website { get; set; }
+        public VendorType VendorType { get; set; } = VendorType.EquipmentSupplier;
+        public KycStatus KycStatus { get; set; } = KycStatus.NotStarted;
+        public string? KycRejectionReason { get; set; }
+        public bool IsComplete { get; set; } = false;
     }
 }

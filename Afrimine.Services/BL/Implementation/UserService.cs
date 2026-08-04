@@ -485,15 +485,15 @@ namespace Afrimine.Services.BL.Implementation
             if (!isVendor)
                 return ApiResponse<string>.Fail("Only vendors can setup a business profile.", StatusCodes.Status403Forbidden);
 
-            var profile = await _repositoryManager.VendorProfile.GetByUserId(userId);
+            var profile = await _repositoryManager.Profile.GetByUserId(userId);
             if (profile == null)
             {
-                profile = new VendorProfile
+                profile = new SupplierProfile
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.Parse(userId),
                     UserId = userId
                 };
-                await _repositoryManager.VendorProfile.Create(profile);
+                await _repositoryManager.Profile.Create(profile);
             }
 
             profile.BusinessType = request.BusinessType;
@@ -515,7 +515,7 @@ namespace Afrimine.Services.BL.Implementation
             if (user == null)
                 return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, StatusCodes.Status404NotFound);
 
-            var profile = await _repositoryManager.VendorProfile.GetByUserId(userId);
+            var profile = await _repositoryManager.Profile.GetByUserId(userId);
             if (profile == null)
                 return ApiResponse<string>.Fail("Please complete business profile setup first.", StatusCodes.Status400BadRequest);
 
@@ -547,16 +547,16 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<VendorProfileResponseDto>> GetVendorProfileAsync(string userId)
         {
-            var profile = await _repositoryManager.VendorProfile.GetByUserId(userId);
+            var profile = await _repositoryManager.Profile.GetByUserId(userId);
             if (profile == null)
                 return ApiResponse<VendorProfileResponseDto>.Fail("Profile not found.", StatusCodes.Status404NotFound);
 
             return ApiResponse<VendorProfileResponseDto>.Ok(new VendorProfileResponseDto
             {
                 BusinessType = profile.BusinessType,
-                Country = profile.Country,
+                Country = profile.Country!,
                 StateOrRegion = profile.StateOrRegion,
-                OfficeAddress = profile.OfficeAddress,
+                OfficeAddress = profile.OfficeAddress!,
                 Website = profile.Website,
                 DocumentType = profile.DocumentType,
                 DocumentFileName = profile.DocumentFileName,

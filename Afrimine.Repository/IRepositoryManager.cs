@@ -8,7 +8,7 @@ namespace Afrimine.Repository
         ISendEmailRepository SendEmail { get; }
 
         Task SaveAsync();
-        IVendorProfileRepository VendorProfile { get; }
+        ISupplierProfileRepository Profile { get; }
 
         IListingRepository Listing { get; }
         ISavedListingRepository SavedListing { get; }
