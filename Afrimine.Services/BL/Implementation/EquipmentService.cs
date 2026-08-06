@@ -1040,8 +1040,7 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             }
         }
 
-        public async Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(string? q, MachineType? machineType, string? location,decimal? maxDailyRate, bool availableOnly,
-    int page, int pageSize)
+        public async Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly, int page, int pageSize)
         {
             var (items, total) = await _equipment.SearchAssetsAsync(
                 q, machineType, location, maxDailyRate, availableOnly, page, pageSize);
