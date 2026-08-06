@@ -18,15 +18,18 @@ namespace Afrimine.Services.BL.Implementation
         private readonly IRepositoryManager _repository;
         private readonly IAdminRepository _admin;
         private readonly UserManager<Afrimine.Model.Entities.User> _userManager;
+        private readonly IEquipmentRepository _equipment;
 
         public AdminService(
             IRepositoryManager repository,
             IAdminRepository admin,
-            UserManager<Afrimine.Model.Entities.User> userManager)
+            UserManager<Afrimine.Model.Entities.User> userManager,
+            IEquipmentRepository equipment)
         {
             _repository = repository;
             _admin = admin;
             _userManager = userManager;
+            _equipment = equipment;
         }
 
         // ── Dashboard ─────────────────────────────────────────────────────────
@@ -493,10 +496,83 @@ namespace Afrimine.Services.BL.Implementation
                 });
         }
 
+        //public async Task<ApiResponse<AdminKycDetailDto>> GetKycDetailAsync(Guid profileId)
+        //{
+        //    var p = await _admin.GetKycDetailAsync(profileId);
+        //    if (p is null) return ApiResponse<AdminKycDetailDto>.Fail("KYC submission not found.", 404);
+
+        //    return ApiResponse<AdminKycDetailDto>.Ok(new AdminKycDetailDto
+        //    {
+        //        Id = p.Id.ToString(),
+        //        UserId = p.UserId,
+        //        FullName = p.User?.FullName,
+        //        DateOfBirth = p.DateOfBirth,
+        //        Email = p.User?.Email,
+        //        Phone = p.User?.PhoneNumber,
+        //        Address = p.OfficeAddress,
+        //        DocumentType = p.DocumentType?.ToString(),
+        //        DocumentIdNumber = p.DocumentIdNumber,
+        //        Country = p.Country,
+        //        SubmittedAt = p.CreatedAt.ToString("O"),
+        //        ProfilePhotoUrl = p.ProfilePhotoUrl,
+        //        Status = p.KycStatus.ToString().ToLower(),
+        //        RejectionReason = p.KycRejectionReason,
+        //        Documents = !string.IsNullOrWhiteSpace(p.DocumentUrl)
+        // ? new List<KycDocumentDto>
+        // {
+        //    new()
+        //    {
+        //        FileName = p.DocumentFileName,
+        //        DownloadUrl = p.DocumentUrl,
+        //        FileSizeBytes = p.DocumentFileSizeBytes,
+        //        DocumentType = p.DocumentType?.ToString()
+        //    }
+        // }
+        // : new List<KycDocumentDto>()
+        //    });
+        //}
+
         public async Task<ApiResponse<AdminKycDetailDto>> GetKycDetailAsync(Guid profileId)
         {
             var p = await _admin.GetKycDetailAsync(profileId);
-            if (p is null) return ApiResponse<AdminKycDetailDto>.Fail("KYC submission not found.", 404);
+            if (p is null)
+                return ApiResponse<AdminKycDetailDto>.Fail("KYC submission not found.", 404);
+
+            // Fetch equipment/assets for this supplier — their photos are the "documents"
+            var assets = await _equipment.GetAssetsBySupplierAsync(profileId);
+
+            var documents = assets
+                .SelectMany(a => new[]
+                {
+            !string.IsNullOrWhiteSpace(a.FrontPhotoUrl)
+                ? new KycDocumentDto
+                {
+                    FileName = $"{a.Brand} {a.Model} — Front Photo",
+                    DownloadUrl = a.FrontPhotoUrl,
+                    FileSizeBytes = null,
+                    DocumentType = "Equipment Photo"
+                } : null,
+
+            !string.IsNullOrWhiteSpace(a.SidePhotoUrl)
+                ? new KycDocumentDto
+                {
+                    FileName = $"{a.Brand} {a.Model} — Side Photo",
+                    DownloadUrl = a.SidePhotoUrl,
+                    FileSizeBytes = null,
+                    DocumentType = "Equipment Photo"
+                } : null,
+
+            !string.IsNullOrWhiteSpace(a.SerialPlatePhotoUrl)
+                ? new KycDocumentDto
+                {
+                    FileName = $"{a.Brand} {a.Model} — Serial Plate",
+                    DownloadUrl = a.SerialPlatePhotoUrl,
+                    FileSizeBytes = null,
+                    DocumentType = "Serial Plate"
+                } : null
+                })
+                .Where(d => d != null)
+                .ToList();
 
             return ApiResponse<AdminKycDetailDto>.Ok(new AdminKycDetailDto
             {
@@ -506,17 +582,15 @@ namespace Afrimine.Services.BL.Implementation
                 DateOfBirth = p.DateOfBirth,
                 Email = p.User?.Email,
                 Phone = p.User?.PhoneNumber,
-                Address = p.OfficeAddress,
+                Address = p.OfficeAddress ?? p.YardAddress,
                 DocumentType = p.DocumentType?.ToString(),
                 DocumentIdNumber = p.DocumentIdNumber,
                 Country = p.Country,
-                SubmittedAt = (p.CreatedAt).ToString("O"),
+                SubmittedAt = p.CreatedAt.ToString("O"),
                 ProfilePhotoUrl = p.ProfilePhotoUrl,
-                DocumentFileName = p.DocumentFileName,
-                DocumentFileSizeBytes = p.DocumentFileSizeBytes,
-                DocumentDownloadUrl = p.DocumentUrl,
                 Status = p.Status.ToString().ToLower(),
-                RejectionReason = p.RejectionReason
+                RejectionReason = p.RejectionReason,
+                Documents = documents!
             });
         }
 

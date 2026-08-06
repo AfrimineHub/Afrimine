@@ -288,7 +288,8 @@ namespace Afrimine.Services.DTOs
         public string? ProfilePhotoUrl { get; set; }
         public string? DocumentFileName { get; set; }
         public long? DocumentFileSizeBytes { get; set; }
-        public string? DocumentDownloadUrl { get; set; }
+        //public string? DocumentDownloadUrl { get; set; }
+        public List<KycDocumentDto> Documents { get; set; } = new();
         public string? Status { get; set; }
         public string? RejectionReason { get; set; }
     }
@@ -311,5 +312,13 @@ namespace Afrimine.Services.DTOs
         [Required] public string FullName { get; set; } = string.Empty;
         [Required][EmailAddress] public string Email { get; set; } = string.Empty;
         [Required] public string Password { get; set; } = string.Empty;
+    }
+
+    public class KycDocumentDto
+    {
+        public string? FileName { get; set; }
+        public string? DownloadUrl { get; set; }
+        public long? FileSizeBytes { get; set; }
+        public string? DocumentType { get; set; }
     }
 }
