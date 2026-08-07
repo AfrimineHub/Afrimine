@@ -503,7 +503,7 @@ namespace Afrimine.Api.Controllers.V1
         /// **MinerPhone** is required by PayScrow to create the escrow transaction (Nigerian format: 08012345678).
         /// </remarks>
         
-        [Authorize(Roles = Roles.Buyer)]
+        [Authorize(Roles = Roles.Vendor)]
         [HttpPost("bookings")]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto request)
         {
