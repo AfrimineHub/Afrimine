@@ -1,4 +1,5 @@
 ﻿using Afrimine.Model.Enums;
+using Afrimine.Model.ViewModels;
 using Afrimine.Services.BL.Interfaces;
 using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
@@ -37,7 +38,6 @@ namespace Afrimine.Api.Controllers.V1
         ///
         /// **Password requirements:** Min 8 chars, uppercase, lowercase, digit, special character.
         /// </remarks>
-    
 
 
         /// <summary>Get authenticated supplier's full profile (Vendor only)</summary>
@@ -50,9 +50,39 @@ namespace Afrimine.Api.Controllers.V1
         /// - `Active` — verified, full platform access
         /// - `Rejected` — rejected, see `rejectionReason` and resubmit
         /// - `Suspended` — account suspended by admin
+        ///
+        /// **Response shape:**
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "statusCode": 200,
+        ///   "message": "Successful",
+        ///   "data": {
+        ///     "id": "3cc78b92-95d2-4f21-83c3-7b845b86c0f6",
+        ///     "companyName": "John Doe Enterprises",
+        ///     "businessEmail": "john@example.com",
+        ///     "businessPhone": "+2348012345678",
+        ///     "primaryBaseCity": "Lagos",
+        ///     "yardAddress": "123 Industrial Ave",
+        ///     "latitude": 6.5244,
+        ///     "longitude": 3.3792,
+        ///     "status": "pending",
+        ///     "onboardingStep": 3,
+        ///     "isSubmitted": false,
+        ///     "bankName": "First Bank",
+        ///     "bankAccountNumber": "0123456789",
+        ///     "bankAccountName": "John Doe Enterprises",
+        ///     "createdAt": "2026-08-01T10:00:00Z"
+        ///   }
+        /// }
+        /// ```
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("suppliers/me")]
+        [ProducesResponseType(typeof(ApiResponse<SupplierProfileResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetProfile()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -67,9 +97,24 @@ namespace Afrimine.Api.Controllers.V1
         /// Partial update — only send fields you want to change.
         /// Updates company name, business phone, and business email.
         /// Advances onboarding progress to step 2.
+        ///
+        /// **Response shape:**
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "statusCode": 200,
+        ///   "message": "Profile updated successfully.",
+        ///   "data": "Profile updated successfully."
+        /// }
+        /// ```
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPatch("suppliers/profile")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateProfile([FromBody] SupplierProfileUpdateDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -77,6 +122,8 @@ namespace Afrimine.Api.Controllers.V1
             var response = await _service.Equipment.UpdateProfileAsync(userId, request);
             return StatusCode(response.StatusCode, response);
         }
+
+
 
         /// <summary>Save yard/office GPS location — Onboarding Step 3 (Vendor only)</summary>
         /// <remarks>
@@ -94,6 +141,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPut("suppliers/location")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateLocation([FromBody] SupplierLocationDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -115,6 +167,10 @@ namespace Afrimine.Api.Controllers.V1
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("suppliers/documents")]
         [Consumes("multipart/form-data")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UploadDocument([FromForm] SupplierDocumentUploadDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -138,6 +194,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("suppliers/submit")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Submit()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -159,6 +220,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("suppliers/status")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetStatus()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -188,6 +254,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("assets")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CreateAsset([FromBody] CreateAssetDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -210,6 +281,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("assets")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetAssets()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -228,6 +304,11 @@ namespace Afrimine.Api.Controllers.V1
 
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("assets/{assetId:guid}")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetAsset(Guid assetId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -250,6 +331,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPut("assets/{assetId:guid}")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateAsset(Guid assetId, [FromBody] UpdateAssetDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -268,6 +354,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpDelete("assets/{assetId:guid}")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteAsset(Guid assetId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -292,6 +383,11 @@ namespace Afrimine.Api.Controllers.V1
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("assets/{assetId:guid}/photos")]
         [Consumes("multipart/form-data")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UploadAssetPhotos(Guid assetId, [FromForm] AssetPhotoUploadDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -319,6 +415,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [AllowAnonymous]
         [HttpGet("assets/{assetId:guid}/pricing")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetPricing(
             Guid assetId, [FromQuery] int totalDays, [FromQuery] double distanceKm,
             [FromQuery] string currency = "NGN")
@@ -337,6 +438,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("assets/{assetId:guid}/operators")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> AssignOperator(Guid assetId, [FromQuery] Guid operatorId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -368,6 +474,11 @@ namespace Afrimine.Api.Controllers.V1
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("operators")]
         [Consumes("multipart/form-data")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CreateOperator([FromForm] CreateOperatorDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -388,6 +499,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("operators")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetOperators()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -405,6 +521,11 @@ namespace Afrimine.Api.Controllers.V1
         [Authorize(Roles = Roles.Vendor)]
         [HttpPut("operators/{operatorId:guid}")]
         [Consumes("multipart/form-data")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateOperator(Guid operatorId, [FromForm] CreateOperatorDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -426,6 +547,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("operators/{operatorId:guid}/guarantors")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> AddGuarantor(Guid operatorId, [FromBody] CreateGuarantorDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -448,6 +574,11 @@ namespace Afrimine.Api.Controllers.V1
         
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("operators/{operatorId:guid}/vetting")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> SubmitVetting(Guid operatorId, [FromBody] VettingSubmitDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -469,6 +600,11 @@ namespace Afrimine.Api.Controllers.V1
         
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("operators/{operatorId:guid}/vetting-status")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetVettingStatus(Guid operatorId)
         {
             var response = await _service.Equipment.GetVettingStatusAsync(operatorId);
@@ -505,6 +641,11 @@ namespace Afrimine.Api.Controllers.V1
         
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("bookings")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -530,6 +671,11 @@ namespace Afrimine.Api.Controllers.V1
         
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetBookings([FromQuery] string? status)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -548,6 +694,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetBooking(Guid bookingId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -566,6 +717,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPut("bookings/{bookingId:guid}/approve")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ApproveBooking(Guid bookingId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -583,6 +739,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPut("bookings/{bookingId:guid}/decline")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeclineBooking(Guid bookingId, [FromBody] DeclineBookingDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -600,6 +761,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/contract")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetContract(Guid bookingId)
         {
             // TODO: Generate PDF contract / E-Waybill
@@ -624,6 +790,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("bookings/{bookingId:guid}/dispatch")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Dispatch(Guid bookingId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -648,6 +819,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/logistics-status")]
+        [ProducesResponseType(typeof(ApiResponse<LogisticsStatusDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetLogisticsStatus(Guid bookingId)
         {
             var response = await _service.Equipment.GetLogisticsStatusAsync(bookingId);
@@ -667,6 +843,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/tracking")]
+        [ProducesResponseType(typeof(ApiResponse<TrackingDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetTracking(Guid bookingId)
         {
             var response = await _service.Equipment.GetTrackingAsync(bookingId);
@@ -686,6 +867,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("bookings/{bookingId:guid}/insurance")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> TriggerInsurance(Guid bookingId, [FromBody] TriggerInsuranceDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -702,6 +888,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/insurance-certificate")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetInsuranceCertificate(Guid bookingId)
         {
             var response = await _service.Equipment.GetLogisticsStatusAsync(bookingId);
@@ -723,6 +914,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpPost("bookings/{bookingId:guid}/site-arrival")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> SiteArrival(Guid bookingId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -747,6 +943,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("bookings/{bookingId:guid}/daily-check")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DailyCheck(Guid bookingId, [FromBody] DailyCheckDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -775,6 +976,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/milestones")]
+        [ProducesResponseType(typeof(ApiResponse<MilestoneDto[]>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetMilestones(Guid bookingId)
         {
             var response = await _service.Equipment.GetMilestonesAsync(bookingId);
@@ -794,6 +1000,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpPost("bookings/{bookingId:guid}/return-clearance")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ReturnClearance(Guid bookingId)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -816,6 +1027,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/payment-breakdown")]
+        [ProducesResponseType(typeof(ApiResponse<PaymentBreakdownDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetPaymentBreakdown(Guid bookingId)
         {
             var response = await _service.Equipment.GetPaymentBreakdownAsync(bookingId);
@@ -839,6 +1055,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpPost("bookings/{bookingId:guid}/disputes")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> RaiseDispute(Guid bookingId, [FromBody] BookingDisputeDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -860,6 +1081,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("bookings/{bookingId:guid}/disputes")]
+        [ProducesResponseType(typeof(ApiResponse<DisputeDto[]>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetBookingDisputes(Guid bookingId)
         {
             var response = await _service.Equipment.GetBookingDisputesAsync(bookingId);
@@ -874,6 +1100,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("disputes")]
+        [ProducesResponseType(typeof(ApiResponse<DisputeDto[]>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetAllDisputes()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -913,6 +1144,11 @@ namespace Afrimine.Api.Controllers.V1
         /// <response code="404">Wallet not found for this supplier.</response>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("wallet/balance")]
+        [ProducesResponseType(typeof(ApiResponse<WalletBalanceDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetWalletBalance()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -937,6 +1173,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpPost("wallet/withdrawal")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> RequestWithdrawal([FromBody] WithdrawalRequestDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -958,6 +1199,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("wallet/transactions")]
+        [ProducesResponseType(typeof(ApiResponse<WalletTransactionDto[]>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetWalletTransactions()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -981,6 +1227,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("dashboard/supplier/stats")]
+        [ProducesResponseType(typeof(ApiResponse<SupplierDashboardStatsDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetDashboardStats()
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -1005,6 +1256,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpPost("escrow/apply-code")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ApplyEscrowCode([FromBody] EscrowCodeApplyDto request)
         {
             var userId = HttpContext.User.GetLoggedInUserId();
@@ -1027,6 +1283,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.VendorAndBuyer)]
         [HttpGet("escrow/status/{transactionNumber}")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetPayscrowStatus(string transactionNumber)
         {
             var response = await _service.Equipment.GetPayscrowTransactionStatusAsync(transactionNumber);
@@ -1052,6 +1313,11 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [AllowAnonymous]
         [HttpGet("escrow/charges")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CalculateCharges(
             [FromQuery] string currencyCode, [FromQuery] decimal amount,
             [FromQuery] decimal merchantChargePercentage = 0)
@@ -1076,6 +1342,7 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [AllowAnonymous]
         [HttpGet("banks")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<PayscrowBank>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetSupportedBanks()
         {
             var response = await _service.Equipment.GetSupportedBanksAsync();
