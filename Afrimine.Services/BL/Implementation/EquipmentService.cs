@@ -468,6 +468,123 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         // ── Bookings ──────────────────────────────────────────────────────────
+        //public async Task<ApiResponse<BookingResponseDto>> CreateBookingAsync(string minerId, CreateBookingDto request)
+        //{
+        //    var asset = await _equipment.GetAssetAsync(request.AssetId);
+        //    if (asset is null) return ApiResponse<BookingResponseDto>.Fail("Asset not found.", 404);
+        //    if (asset.Status != AssetStatus.Available)
+        //        return ApiResponse<BookingResponseDto>.Fail("Asset is not available.", 409);
+
+        //    var miner = await _userManager.FindByIdAsync(minerId);
+        //    if (miner is null) return ApiResponse<BookingResponseDto>.Fail("Miner not found.", 404);
+
+        //    var totalDays = (int)(request.EndDate - request.StartDate).TotalDays;
+        //    if (totalDays <= 0) return ApiResponse<BookingResponseDto>.Fail("Invalid date range.", 400);
+
+        //    var rentalFee = asset.DailyRentalRate * totalDays;
+        //    var mobilizationFee = asset.MobilizationFeePerKm * (decimal)request.DistanceKm;
+        //    var total = rentalFee + mobilizationFee;
+        //    var platformFee = Math.Round(total * 0.15m, 2);
+        //    var supplierPayout = total - platformFee;
+        //    var milestone1 = Math.Round(supplierPayout * 0.20m, 2);
+        //    var milestone2 = Math.Round(supplierPayout * 0.40m, 2);
+        //    var milestone3 = supplierPayout - milestone1 - milestone2;
+
+        //    var txRef = $"AFRIMINE-{Guid.NewGuid().ToString("N")[..12].ToUpperInvariant()}";
+
+        //    // Get supplier profile for bank details
+        //    var supplierProfile = await _equipment.GetSupplierProfileAsync(asset.SupplierId);
+
+        //    // Create PayScrow transaction
+        //    var payscrowRequest = new PayscrowCreateTransactionRequest
+        //    {
+        //        TransactionReference = txRef,
+        //        MerchantEmailAddress = supplierProfile?.BusinessEmail ?? string.Empty,
+        //        MerchantPhoneNo = supplierProfile?.BusinessPhone,
+        //        MerchantName = supplierProfile?.CompanyName ?? "Equipment Supplier",
+        //        CustomerEmailAddress = miner.Email!,
+        //        CustomerPhoneNo = request.MinerPhone,
+        //        CustomerName = miner.FullName,
+        //        CurrencyCode = request.Currency,
+        //        MerchantChargePercentage = 0, // miner bears charge
+        //        ReturnUrl = _config.PayscrowReturnUrl,
+        //        WebhookNotificationUrl = _config.PayscrowWebhookUrl,
+        //        Items = new List<PayscrowItem>
+        //        {
+        //            new()
+        //            {
+        //                Name = $"{asset.Brand} {asset.Model} Rental",
+        //                Description = $"{totalDays} day(s) rental + mobilization",
+        //                Quantity = 1,
+        //                Price = total
+        //            }
+        //        }
+        //    };
+
+        //    // Add settlement account if supplier has bank details
+        //    if (!string.IsNullOrWhiteSpace(supplierProfile?.BankCode)
+        //        && !string.IsNullOrWhiteSpace(supplierProfile?.BankAccountNumber))
+        //    {
+        //        // Calculate charges first to get correct settlement amount
+        //        var charges = await _payscrow.CalculateChargesAsync(request.Currency, total, 0);
+        //        if (charges.Success)
+        //        {
+        //            payscrowRequest.SettlementAccounts = new List<PayscrowSettlementAccount>
+        //            {
+        //                new()
+        //                {
+        //                    BankCode = supplierProfile.BankCode,
+        //                    AccountNumber = supplierProfile.BankAccountNumber,
+        //                    AccountName = supplierProfile.BankAccountName ?? string.Empty,
+        //                    Amount = charges.TotalSettlementAmount
+        //                }
+        //            };
+        //        }
+        //    }
+
+        //    var payscrowResult = await _payscrow.CreateTransactionAsync(payscrowRequest);
+
+        //    var booking = new Booking
+        //    {
+        //        AssetId = request.AssetId,
+        //        MinerId = minerId,
+        //        SupplierId = asset.SupplierId,
+        //        StartDate = request.StartDate,
+        //        EndDate = request.EndDate,
+        //        TotalDays = totalDays,
+        //        DistanceKm = request.DistanceKm,
+        //        RentalFee = rentalFee,
+        //        MobilizationFee = mobilizationFee,
+        //        TotalAmount = total,
+        //        PlatformFee = platformFee,
+        //        SupplierPayout = supplierPayout,
+        //        SiteAddress = request.SiteAddress,
+        //        SiteLatitude = request.SiteLatitude,
+        //        SiteLongitude = request.SiteLongitude,
+        //        Currency = request.Currency,
+        //        Milestone1Amount = milestone1,
+        //        Milestone2Amount = milestone2,
+        //        Milestone3Amount = milestone3,
+        //        PayscrowTransactionReference = txRef,
+        //        PayscrowTransactionNumber = payscrowResult.TransactionNumber,
+        //        PayscrowPaymentLink = payscrowResult.PaymentLink,
+        //        PayscrowStatus = PayscrowTransactionStatus.Pending,
+        //        LogisticsType = request.LogisticsType
+        //    };
+
+        //    await _equipment.CreateBookingAsync(booking);
+        //    await _repository.SaveAsync();
+
+        //    var dto = MapToBookingDto(booking);
+        //    dto.PaymentLink = payscrowResult.Success ? payscrowResult.PaymentLink : null;
+
+        //    if (!payscrowResult.Success)
+        //        return ApiResponse<BookingResponseDto>.Ok(dto, 201,
+        //            $"Booking created but payment link generation failed: {payscrowResult.Error}. Contact support.");
+
+        //    return ApiResponse<BookingResponseDto>.Ok(dto, 201, "Booking created. Share payment link with miner.");
+        //}
+
         public async Task<ApiResponse<BookingResponseDto>> CreateBookingAsync(string minerId, CreateBookingDto request)
         {
             var asset = await _equipment.GetAssetAsync(request.AssetId);
@@ -492,10 +609,9 @@ namespace Afrimine.Services.BL.Implementation
 
             var txRef = $"AFRIMINE-{Guid.NewGuid().ToString("N")[..12].ToUpperInvariant()}";
 
-            // Get supplier profile for bank details
+            // Get supplier profile for display name only
             var supplierProfile = await _equipment.GetSupplierProfileAsync(asset.SupplierId);
 
-            // Create PayScrow transaction
             var payscrowRequest = new PayscrowCreateTransactionRequest
             {
                 TransactionReference = txRef,
@@ -506,40 +622,35 @@ namespace Afrimine.Services.BL.Implementation
                 CustomerPhoneNo = request.MinerPhone,
                 CustomerName = miner.FullName,
                 CurrencyCode = request.Currency,
-                MerchantChargePercentage = 0, // miner bears charge
+                MerchantChargePercentage = 0,
                 ReturnUrl = _config.PayscrowReturnUrl,
                 WebhookNotificationUrl = _config.PayscrowWebhookUrl,
                 Items = new List<PayscrowItem>
-                {
-                    new()
-                    {
-                        Name = $"{asset.Brand} {asset.Model} Rental",
-                        Description = $"{totalDays} day(s) rental + mobilization",
-                        Quantity = 1,
-                        Price = total
-                    }
-                }
+        {
+            new()
+            {
+                Name = $"{asset.Brand} {asset.Model} Rental",
+                Description = $"{totalDays} day(s) rental + mobilization",
+                Quantity = 1,
+                Price = total
+            }
+        }
             };
 
-            // Add settlement account if supplier has bank details
-            if (!string.IsNullOrWhiteSpace(supplierProfile?.BankCode)
-                && !string.IsNullOrWhiteSpace(supplierProfile?.BankAccountNumber))
+            // Settlement goes to YOUR escrow account, not the supplier
+            var charges = await _payscrow.CalculateChargesAsync(request.Currency, total, 0);
+            if (charges.Success)
             {
-                // Calculate charges first to get correct settlement amount
-                var charges = await _payscrow.CalculateChargesAsync(request.Currency, total, 0);
-                if (charges.Success)
-                {
-                    payscrowRequest.SettlementAccounts = new List<PayscrowSettlementAccount>
-                    {
-                        new()
-                        {
-                            BankCode = supplierProfile.BankCode,
-                            AccountNumber = supplierProfile.BankAccountNumber,
-                            AccountName = supplierProfile.BankAccountName ?? string.Empty,
-                            Amount = charges.TotalSettlementAmount
-                        }
-                    };
-                }
+                payscrowRequest.SettlementAccounts = new List<PayscrowSettlementAccount>
+        {
+            new()
+            {
+                BankCode = "058",
+                AccountNumber = "0138272990",
+                AccountName = "GTB",
+                Amount = charges.TotalSettlementAmount
+            }
+        };
             }
 
             var payscrowResult = await _payscrow.CreateTransactionAsync(payscrowRequest);
