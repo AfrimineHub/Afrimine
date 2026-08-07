@@ -894,6 +894,23 @@ namespace Afrimine.Api.Controllers.V1
         ///
         /// Only `availableBalance` can be withdrawn. `pendingBalance` becomes available as milestones are released.
         /// </remarks>
+        /// <response code="200">
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "statusCode": 200,
+        ///   "message": "Successful",
+        ///   "data": {
+        ///     "availableBalance": 0,
+        ///     "pendingBalance": 0,
+        ///     "currency": "NGN"
+        ///   }
+        /// }
+        /// ```
+        /// </response>
+        /// <response code="401">Invalid or missing Bearer token.</response>
+        /// <response code="403">User is not a Vendor.</response>
+        /// <response code="404">Wallet not found for this supplier.</response>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("wallet/balance")]
         public async Task<IActionResult> GetWalletBalance()
