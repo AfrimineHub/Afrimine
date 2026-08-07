@@ -639,7 +639,7 @@ namespace Afrimine.Api.Controllers.V1
         /// **MinerPhone** is required by PayScrow to create the escrow transaction (Nigerian format: 08012345678).
         /// </remarks>
         
-        [Authorize(Roles = Roles.Vendor)]
+        [Authorize(Roles = Roles.Buyer)]
         [HttpPost("bookings")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
