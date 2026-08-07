@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Afrimine.Model.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace Afrimine.Services.DTOs
 {
@@ -320,5 +321,25 @@ namespace Afrimine.Services.DTOs
         public string? DownloadUrl { get; set; }
         public long? FileSizeBytes { get; set; }
         public string? DocumentType { get; set; }
+    }
+
+
+    public class AdminCreateUserDto
+    {
+        [Required] public string FullName { get; set; } = string.Empty;
+        [Required][EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required] public string PhoneNumber { get; set; } = string.Empty;
+        [Required] public string Password { get; set; } = string.Empty;
+        [Required] public RoleType Role { get; set; }
+        public VendorType? VendorType { get; set; }
+    }
+
+    public class AdminUpdateUserDto
+    {
+        public string? FullName { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
+        public RoleType? Role { get; set; }
+        public AccountStatus? AccountStatus { get; set; }
     }
 }

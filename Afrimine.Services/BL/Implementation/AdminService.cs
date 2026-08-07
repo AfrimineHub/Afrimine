@@ -641,6 +641,129 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("Admin created successfully.");
         }
 
+        public async Task<ApiResponse<AdminUserListItemDto>> CreateUserAsync(AdminCreateUserDto request)
+        {
+            var existing = await _userManager.FindByEmailAsync(request.Email);
+            if (existing is not null)
+                return ApiResponse<AdminUserListItemDto>.Fail("Email already registered.", 409);
+
+            var user = new User
+            {
+                FullName = request.FullName,
+                UserName = request.Email,
+                Email = request.Email,
+                PhoneNumber = request.PhoneNumber,
+                EmailConfirmed = true,
+                Type = request.Role,
+                Status = AccountStatus.Active
+            };
+
+            var result = await _userManager.CreateAsync(user, request.Password);
+            if (!result.Succeeded)
+                return ApiResponse<AdminUserListItemDto>.Fail(
+                    string.Join(", ", result.Errors.Select(e => e.Description)), 400);
+
+            await _userManager.AddToRoleAsync(user, request.Role.ToString());
+
+            // Auto-create VendorProfile if Vendor
+            if (request.Role == RoleType.Vendor)
+            {
+                var profile = new SupplierProfile
+                {
+                    UserId = user.Id,
+                    VendorType = request.VendorType ?? VendorType.MineralSupplier,
+                    KycStatus = KycStatus.NotStarted,
+                    OnboardingStep = 1
+                };
+                // Add directly via context since IRepositoryManager.VendorProfile.Create expects the type
+                await _repository.Profile.Create(profile);
+                await _repository.SaveAsync();
+            }
+
+            return ApiResponse<AdminUserListItemDto>.Ok(new AdminUserListItemDto
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                Role = user.Type.ToString().ToLower(),
+                KycStatus = "not_started",
+                AccountStatus = user.Status.ToString().ToLower(),
+                CreatedAt = user.CreatedOn.ToString("O")
+            }, 201, "User created successfully.");
+        }
+
+        public async Task<ApiResponse<AdminUserListItemDto>> UpdateUserAsync(
+            string userId, AdminUpdateUserDto request)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+                return ApiResponse<AdminUserListItemDto>.Fail("User not found.", 404);
+
+            if (request.FullName is not null) user.FullName = request.FullName;
+            if (request.PhoneNumber is not null) user.PhoneNumber = request.PhoneNumber;
+            if (request.AccountStatus.HasValue) user.Status = request.AccountStatus.Value;
+
+            // Handle email change
+            if (request.Email is not null && request.Email != user.Email)
+            {
+                var emailTaken = await _userManager.FindByEmailAsync(request.Email);
+                if (emailTaken is not null)
+                    return ApiResponse<AdminUserListItemDto>.Fail("Email already in use.", 409);
+
+                user.Email = request.Email;
+                user.UserName = request.Email;
+                user.NormalizedEmail = request.Email.ToUpper();
+                user.NormalizedUserName = request.Email.ToUpper();
+            }
+
+            // Handle role change
+            if (request.Role.HasValue && request.Role.Value != user.Type)
+            {
+                var currentRoles = await _userManager.GetRolesAsync(user);
+                await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                await _userManager.AddToRoleAsync(user, request.Role.Value.ToString());
+                user.Type = request.Role.Value;
+            }
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return ApiResponse<AdminUserListItemDto>.Fail(
+                    string.Join(", ", result.Errors.Select(e => e.Description)), 400);
+
+            var userIdGuid = Guid.Parse(user.Id);
+            var profiles = await _repository.Profile.GetByIdsAsync(new List<Guid> { userIdGuid });
+            var profile = profiles.FirstOrDefault();
+
+            return ApiResponse<AdminUserListItemDto>.Ok(new AdminUserListItemDto
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                Role = user.Type.ToString().ToLower(),
+                KycStatus = profile?.Status.ToString().ToLower() ?? "not_started",
+                AccountStatus = user.Status.ToString().ToLower(),
+                CreatedAt = user.CreatedOn.ToString("O")
+            });
+        }
+
+        public async Task<ApiResponse<string>> DeleteUserAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+                return ApiResponse<string>.Fail("User not found.", 404);
+
+            // Prevent deleting SuperAdmin accounts
+            if (user.Type == RoleType.SuperAdmin)
+                return ApiResponse<string>.Fail("Cannot delete a SuperAdmin account.", 403);
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+                return ApiResponse<string>.Fail(
+                    string.Join(", ", result.Errors.Select(e => e.Description)), 400);
+
+            return ApiResponse<string>.Ok("User deleted successfully.");
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
         private static AdminOrderListItemDto MapToOrderListItem(Afrimine.Model.Entities.Order o) => new()
         {

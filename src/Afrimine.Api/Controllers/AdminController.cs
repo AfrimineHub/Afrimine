@@ -324,13 +324,81 @@ namespace Afrimine.Api.Controllers
         /// ⚠️ Remove this endpoint immediately after creating your first admin.
         /// Requires setup key in query param: `?setupKey= AFRIMINE_SETUP_2026`
         /// </remarks>
-        [AllowAnonymous]
-        [HttpPost("setup-admin")]
-        public async Task<IActionResult> SetupAdmin([FromBody] CreateAdminDto request,
-            [FromQuery] string setupKey)
+        //[AllowAnonymous]
+        //[HttpPost("setup-admin")]
+        //public async Task<IActionResult> SetupAdmin([FromBody] CreateAdminDto request,
+        //    [FromQuery] string setupKey)
+        //{
+        //    if (setupKey != "AFRIMINE_SETUP_2026") return Unauthorized();
+        //    var response = await _service.Admin.CreateAdminAsync(request);
+        //    return StatusCode(response.StatusCode, response);
+        //}
+
+        /// <summary>Create a new user account (SuperAdmin only)</summary>
+        /// <remarks>
+        /// Admin creates a user account directly — email is auto-confirmed, no OTP required.
+        ///
+        /// **Role values:**
+        /// - `1` = Vendor
+        /// - `2` = Buyer
+        /// - `3` = Investor
+        /// - `4` = Support
+        /// - `5` = SuperAdmin
+        ///
+        /// **VendorType (only when Role = 1 / Vendor):**
+        /// - `0` = EquipmentSupplier
+        /// - `1` = MineralSupplier
+        /// - `2` = ManpowerSupplier
+        ///
+        /// A VendorProfile is auto-created when Role is Vendor.
+        /// </remarks>
+        [HttpPost("users")]
+        [ProducesResponseType(typeof(ApiResponse<AdminUserListItemDto>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 409)]
+        public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserDto request)
         {
-            if (setupKey != "AFRIMINE_SETUP_2026") return Unauthorized();
-            var response = await _service.Admin.CreateAdminAsync(request);
+            var response = await _service.Admin.CreateUserAsync(request);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Update a user's details (SuperAdmin only)</summary>
+        /// <remarks>
+        /// Partial update — only send the fields you want to change.
+        /// Handles email change, role change, and account status update in one call.
+        ///
+        /// **AccountStatus values:**
+        /// - `0` = Pending
+        /// - `1` = Active
+        /// - `2` = Suspended
+        /// - `3` = Banned
+        /// - `4` = Deactivated
+        /// </remarks>
+        [HttpPut("users/{userId}")]
+        [ProducesResponseType(typeof(ApiResponse<AdminUserListItemDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 404)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 409)]
+        public async Task<IActionResult> UpdateUser(string userId, [FromBody] AdminUpdateUserDto request)
+        {
+            var response = await _service.Admin.UpdateUserAsync(userId, request);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Permanently delete a user account (SuperAdmin only)</summary>
+        /// <remarks>
+        /// Permanently deletes the user and all associated Identity records.
+        /// Cannot delete SuperAdmin accounts.
+        ///
+        /// **⚠️ This action is irreversible.**
+        /// For temporary restrictions, use `POST /admin/users/{userId}/suspend` or `POST /admin/users/{userId}/ban` instead.
+        /// </remarks>
+        [HttpDelete("users/{userId}")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 403)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 404)]
+        public async Task<IActionResult> DeleteUser(string userId)
+        {
+            var response = await _service.Admin.DeleteUserAsync(userId);
             return StatusCode(response.StatusCode, response);
         }
     }
