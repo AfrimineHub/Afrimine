@@ -48,5 +48,9 @@ namespace Afrimine.Repository
         Task<IEnumerable<WalletTransaction>> GetWalletTransactionsAsync(Guid supplierId);
         Task<(IEnumerable<Asset> Items, int TotalCount)> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly,int page, int pageSize);
         Task<SupplierProfile?> GetSupplierProfileByUserIdAsync(string userId);
+
+        void DeleteSupplierProfile(SupplierProfile profile);
+        void DeleteWallet(SupplierWallet wallet);
+        void DeleteAsset(Asset asset); 
     }
 }

@@ -189,5 +189,14 @@ namespace Afrimine.Repository
 
             return (items, total);
         }
+
+        public void DeleteSupplierProfile(SupplierProfile profile) => 
+            _context.Set<SupplierProfile>().Remove(profile);
+
+        public void DeleteWallet(SupplierWallet wallet) =>
+            _context.Set<SupplierWallet>().Remove(wallet);
+
+        public void DeleteAsset(Asset asset) =>
+            _context.Set<Asset>().Remove(asset);
     }
 }

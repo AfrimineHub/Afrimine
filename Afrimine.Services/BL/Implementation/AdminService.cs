@@ -752,16 +752,21 @@ namespace Afrimine.Services.BL.Implementation
             if (user is null)
                 return ApiResponse<string>.Fail("User not found.", 404);
 
-            // Prevent deleting SuperAdmin accounts
             if (user.Type == RoleType.SuperAdmin)
                 return ApiResponse<string>.Fail("Cannot delete a SuperAdmin account.", 403);
 
-            var result = await _userManager.DeleteAsync(user);
+            // Soft-delete: lock the account
+            user.Status = AccountStatus.Suspended;
+            user.LockoutEnabled = true;
+            user.LockoutEnd = DateTimeOffset.MaxValue;
+            user.EmailConfirmed = false;
+
+            var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
                 return ApiResponse<string>.Fail(
                     string.Join(", ", result.Errors.Select(e => e.Description)), 400);
 
-            return ApiResponse<string>.Ok("User deleted successfully.");
+            return ApiResponse<string>.Ok("User suspended successfully.");
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
