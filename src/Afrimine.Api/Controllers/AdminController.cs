@@ -288,7 +288,7 @@ namespace Afrimine.Api.Controllers
         /// Returns all vendor identity information and the URL to download/view their uploaded document.
         /// Use `documentDownloadUrl` to view the document before approving or rejecting.
         /// </remarks>
-        [HttpGet("kyc/{submissionId:guid}")]
+        [HttpGet("kyc/review/{submissionId:guid}")]
         [ProducesResponseType(typeof(ApiResponse<AdminKycDetailDto>), 200)]
         public async Task<IActionResult> GetKycDetail(Guid submissionId)
         {
