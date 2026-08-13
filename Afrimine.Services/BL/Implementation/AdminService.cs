@@ -84,7 +84,7 @@ namespace Afrimine.Services.BL.Implementation
                     Description = $"{k.User?.FullName ?? "Vendor"} submitted KYC documents",
                     Time = TimeAgo(k.CreatedAt),
                     ActionText = "Review",
-                    ActionUrl = $"/admin/kyc/{k.Id}"
+                    ActionUrl = $"/admin/kyc/review/{k.Id}"
                 });
             }
 
