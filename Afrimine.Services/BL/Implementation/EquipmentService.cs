@@ -1093,7 +1093,30 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             Longitude = p.Longitude,
             CacCertificateUrl = p.CacCertificateUrl,
             Status = p.Status.ToString(),
-            OnboardingStep = p.OnboardingStep
+            OnboardingStep = p.OnboardingStep,
+            CacCertificatePublicId = p.CacCertificatePublicId,
+            IsSubmitted = p.IsSubmitted,
+            RejectionReason = p.RejectionReason,
+            BankName = p.BankName,
+            BankCode = p.BankCode,
+            BankAccountNumber = p.BankAccountNumber,
+            BankAccountName = p.BankAccountName,
+            OfficeAddress = p.OfficeAddress,
+            DateOfBirth = p.DateOfBirth,
+            DocumentType = p.DocumentType,
+            DocumentIdNumber = p.DocumentIdNumber,
+            DocumentUrl = p.DocumentUrl,
+            DocumentFileName = p.DocumentFileName,
+            DocumentPublicId = p.DocumentPublicId,
+            DocumentFileSizeBytes = p.DocumentFileSizeBytes,
+            ProfilePhotoUrl = p.ProfilePhotoUrl,
+            Country = p.Country,
+            BusinessType = p.BusinessType,
+            StateOrRegion = p.StateOrRegion,
+            Website = p.Website,
+            VendorType = VendorType.EquipmentSupplier,
+            KycStatus = KycStatus.NotStarted,
+            IsComplete = p.IsSubmitted
         };
 
         private static AssetResponseDto MapToAssetDto(Asset a) => new()
