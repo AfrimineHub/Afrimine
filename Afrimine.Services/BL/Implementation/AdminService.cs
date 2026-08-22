@@ -842,6 +842,17 @@ namespace Afrimine.Services.BL.Implementation
             CreatedAt = o.CreatedAt.ToString("O")
         };
 
+        public async Task<ApiResponse<string>> HardDeleteUserAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null) return ApiResponse<string>.Fail("User not found.", 404);
+            if (user.Type == RoleType.SuperAdmin)
+                return ApiResponse<string>.Fail("Cannot delete a SuperAdmin account.", 403);
+
+            await _admin.HardDeleteUserCascadeAsync(userId);
+            return ApiResponse<string>.Ok("User and all related data permanently deleted.");
+        }
+
         //private static List<AdminOrderTimelineItemDto> BuildTimeline(Afrimine.Model.Entities.Order o)
         //{
         //    var now = DateTime.UtcNow;

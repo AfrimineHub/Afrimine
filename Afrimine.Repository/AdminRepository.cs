@@ -299,5 +299,118 @@ namespace Afrimine.Repository
                 .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return (items, total);
         }
+
+        public async Task<bool> HardDeleteUserCascadeAsync(string userId)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // ── 1. Conversations & messages (Buyer/Vendor side) ──
+                    var convIds = await _context.Set<Conversation>()
+                        .Where(c => c.BuyerId == userId || c.VendorId == userId)
+                        .Select(c => c.Id).ToListAsync();
+                    _context.RemoveRange(_context.Set<Message>().Where(m => convIds.Contains(m.ConversationId)));
+                    _context.RemoveRange(_context.Set<Message>().Where(m => m.SenderId == userId));
+                    await _context.SaveChangesAsync();
+                    _context.RemoveRange(_context.Set<Conversation>().Where(c => convIds.Contains(c.Id)));
+                    await _context.SaveChangesAsync();
+
+                    // ── 2. Disputes & escrow tied to this user's orders ──
+                    var orderIds = await _context.Set<Order>()
+                        .Where(o => o.BuyerId == userId || o.VendorId == userId)
+                        .Select(o => o.Id).ToListAsync();
+                    _context.RemoveRange(_context.Set<Dispute>().Where(d => orderIds.Contains(d.OrderId) || d.RaisedById == userId));
+                    _context.RemoveRange(_context.Set<Escrow>().Where(e => orderIds.Contains(e.OrderId) || e.BuyerId == userId || e.VendorId == userId));
+                    await _context.SaveChangesAsync();
+
+                    // ── 3. Bookings (as miner, or as supplier via SupplierProfile) + their children ──
+                    var supplierProfile = await _context.Set<SupplierProfile>().FirstOrDefaultAsync(s => s.UserId == userId);
+                    var bookingIds = await _context.Set<Booking>()
+                        .Where(b => b.MinerId == userId || (supplierProfile != null && b.SupplierId == supplierProfile.Id))
+                        .Select(b => b.Id).ToListAsync();
+                    _context.RemoveRange(_context.Set<BookingDispute>().Where(bd => bookingIds.Contains(bd.BookingId) || bd.RaisedById == userId));
+                    _context.RemoveRange(_context.Set<DailyCheck>().Where(dc => bookingIds.Contains(dc.BookingId)));
+                    await _context.SaveChangesAsync();
+                    _context.RemoveRange(_context.Set<Booking>().Where(b => bookingIds.Contains(b.Id)));
+                    await _context.SaveChangesAsync();
+
+                    // ── 4. RFQs / Quotes / Inquiries this user raised or received ──
+                    var rfqIds = await _context.Set<Rfq>().Where(r => r.BuyerId == userId).Select(r => r.Id).ToListAsync();
+                    _context.RemoveRange(_context.Set<RfqQuote>().Where(rq => rfqIds.Contains(rq.RfqId) || rq.VendorId == userId));
+                    await _context.SaveChangesAsync();
+                    _context.RemoveRange(_context.Set<Rfq>().Where(r => rfqIds.Contains(r.Id)));
+                    _context.RemoveRange(_context.Set<Quote>().Where(q => q.BuyerId == userId || q.VendorId == userId));
+                    _context.RemoveRange(_context.Set<Inquiry>().Where(i => i.BuyerId == userId || i.VendorId == userId));
+                    await _context.SaveChangesAsync();
+
+                    // ── 5. Orders (as buyer or vendor) ──
+                    _context.RemoveRange(_context.Set<Order>().Where(o => orderIds.Contains(o.Id)));
+                    await _context.SaveChangesAsync();
+
+                    // ── 6. Listings owned by this user + their images/saved copies ──
+                    var listingIds = await _context.Set<Listing>().Where(l => l.OwnerId == userId).Select(l => l.Id).ToListAsync();
+                    _context.RemoveRange(_context.Set<ListingImage>().Where(li => listingIds.Contains(li.ListingId)));
+                    _context.RemoveRange(_context.Set<SavedListing>().Where(sl => listingIds.Contains(sl.ListingId) || sl.UserId == userId));
+                    await _context.SaveChangesAsync();
+                    _context.RemoveRange(_context.Set<Listing>().Where(l => listingIds.Contains(l.Id)));
+                    await _context.SaveChangesAsync();
+
+                    // ── 7. Supplier-side assets/operators/wallet, if this user is a supplier ──
+                    if (supplierProfile != null)
+                    {
+                        var assetIds = await _context.Set<Asset>().Where(a => a.SupplierId == supplierProfile.Id).Select(a => a.Id).ToListAsync();
+                        var operatorIds = await _context.Set<Operator>().Where(o => o.SupplierId == supplierProfile.Id).Select(o => o.Id).ToListAsync();
+
+                        _context.RemoveRange(_context.Set<AssetOperator>().Where(ao => assetIds.Contains(ao.AssetId) || operatorIds.Contains(ao.OperatorId)));
+                        _context.RemoveRange(_context.Set<Guarantor>().Where(g => operatorIds.Contains(g.OperatorId)));
+                        await _context.SaveChangesAsync();
+
+                        _context.RemoveRange(_context.Set<Asset>().Where(a => assetIds.Contains(a.Id)));
+                        _context.RemoveRange(_context.Set<Operator>().Where(o => operatorIds.Contains(o.Id)));
+                        await _context.SaveChangesAsync();
+
+                        var wallet = await _context.Set<SupplierWallet>().FirstOrDefaultAsync(w => w.SupplierId == supplierProfile.Id);
+                        if (wallet != null)
+                        {
+                            _context.RemoveRange(_context.Set<WalletTransaction>().Where(t => t.WalletId == wallet.Id));
+                            await _context.SaveChangesAsync();
+                            _context.Remove(wallet);
+                        }
+
+                        await _context.SaveChangesAsync();
+                        _context.Remove(supplierProfile);
+                    }
+
+                    // ── 8. Everything else keyed directly by UserId ──
+                    _context.RemoveRange(_context.Set<Payout>().Where(p => p.VendorId == userId));
+                    _context.RemoveRange(_context.Set<Revenue>().Where(r => r.VendorId == userId));
+                    _context.RemoveRange(_context.Set<SubscriptionInvoice>().Where(si => si.UserId == userId));
+                    _context.RemoveRange(_context.Set<Subscription>().Where(s => s.UserId == userId));
+                    _context.RemoveRange(_context.Set<Notification>().Where(n => n.UserId == userId));
+                    _context.RemoveRange(_context.Set<OtpEntry>().Where(o => o.UserId == userId));
+
+                    var vendorProfile = await _context.Set<VendorProfile>().FirstOrDefaultAsync(v => v.UserId == userId);
+                    if (vendorProfile != null) _context.Remove(vendorProfile);
+
+                    await _context.SaveChangesAsync();
+
+                    // ── 9. The user account itself ──
+                    var user = await _context.Set<User>().FirstOrDefaultAsync(u => u.Id == userId);
+                    if (user != null) _context.Remove(user);
+                    await _context.SaveChangesAsync();
+
+                    await tx.CommitAsync();
+                    return true;
+                }
+                catch
+                {
+                    await tx.RollbackAsync();
+                    throw;
+                }
+            });
+        }
     }
 }
