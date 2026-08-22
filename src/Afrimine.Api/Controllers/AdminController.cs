@@ -435,5 +435,16 @@ namespace Afrimine.Api.Controllers
             var response = await _service.Equipment.AdminReleaseMilestoneAsync(adminId, bookingId, milestoneNumber);
             return StatusCode(response.StatusCode, response);
         }
+
+        /// <summary>Permanently delete a user and ALL related data (SuperAdmin only)</summary>
+        /// <remarks>IRREVERSIBLE. Deletes orders, bookings, escrow, disputes, listings, messages, wallet, subscriptions — everything tied to this account.</remarks>
+        [HttpDelete("users/{userId}/permanent")]
+        [Authorize(Roles = Roles.SuperAdmin)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> HardDeleteUser(string userId)
+        {
+            var response = await _service.Admin.HardDeleteUserAsync(userId);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }
