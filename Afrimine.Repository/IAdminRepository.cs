@@ -47,5 +47,6 @@ namespace Afrimine.Repository
         Task<Dictionary<string, SupplierProfile>> GetSupplierProfilesByOwnerIdsAsync(IEnumerable<string> ownerIds);
         Task<(IEnumerable<Escrow> Items, int TotalCount)> GetEscrowPaymentsAsync(string? status, int page, int pageSize);
         Task<bool> HardDeleteUserCascadeAsync(string userId);
+        Task<int> CountAssetsByStatusAsync(AssetStatus? status);
     }
 }
