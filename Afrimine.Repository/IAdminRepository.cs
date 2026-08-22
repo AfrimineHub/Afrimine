@@ -11,11 +11,6 @@ namespace Afrimine.Repository
         Task<int> CountActiveUsersAsync();
         Task<int> CountKycVerifiedAsync();
         Task<int> CountVendorsAsync();
-
-        // Listings
-        Task<(IEnumerable<Listing> Items, int TotalCount)> GetListingsAsync(string? status, string? q, int page, int pageSize);
-        Task<int> CountListingsByStatusAsync(ListingStatus? status);
-
         // Quotes
         Task<(IEnumerable<Quote> Items, int TotalCount)> GetQuotesAsync(string? q, string? status, int page, int pageSize);
 
@@ -46,5 +41,10 @@ namespace Afrimine.Repository
         Task<IEnumerable<Order>> GetRecentOrdersAsync(int count);
         Task<IEnumerable<SupplierProfile>> GetRecentKycSubmissionsAsync(int count);
         Task<IEnumerable<Dispute>> GetOpenDisputesAsync(int count);
+        // Listings
+        Task<(IEnumerable<Listing> Items, int TotalCount)> GetListingsAsync(string? status, string? q, Guid? supplierId, int page, int pageSize);
+        Task<int> CountListingsByStatusAsync(ListingStatus? status);
+        Task<Dictionary<string, SupplierProfile>> GetSupplierProfilesByOwnerIdsAsync(IEnumerable<string> ownerIds);
+        Task<(IEnumerable<Escrow> Items, int TotalCount)> GetEscrowPaymentsAsync(string? status, int page, int pageSize);
     }
 }

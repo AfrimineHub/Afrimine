@@ -1,6 +1,7 @@
 ﻿using Afrimine.Model.ViewModels;
 using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
+using static Afrimine.Services.DTOs.AuthDto;
 
 namespace Afrimine.Services.BL.Interfaces
 {
@@ -18,5 +19,7 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<string>> RevokeTokenAsync(string userId);
         Task<ApiResponse<string>> SetupBusinessProfileAsync(string userId, BusinessProfileDto model);
         Task<ApiResponse<string>> UploadKycAsync(string userId, KycUploadDto request);
+        Task<ApiResponse<string>> ChangePasswordAsync(string userId, ChangePasswordDto request);
+        Task<ApiResponse<string>> UploadProfilePhotoAsync(string userId, ProfilePhotoUploadDto request);
     }
 }

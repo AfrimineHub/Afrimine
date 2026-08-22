@@ -95,6 +95,10 @@ namespace Afrimine.Services.DTOs
         public string? Category { get; set; }
         public string? Location { get; set; }
         public string? SellerName { get; set; }
+        public string? SellerEmail { get; set; }      
+        public string? SupplierId { get; set; }       
+        public string? CompanyName { get; set; }       
+        public string? VendorType { get; set; }
         public string? Price { get; set; }
         public decimal? PriceAmount { get; set; }
         public string? Currency { get; set; }
@@ -115,6 +119,7 @@ namespace Afrimine.Services.DTOs
     {
         public string? Status { get; set; }
         public string? Q { get; set; }
+        public Guid? SupplierId { get; set; }
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
     }
@@ -149,6 +154,7 @@ namespace Afrimine.Services.DTOs
     public class AdminOrderListItemDto
     {
         public string Id { get; set; } = string.Empty;
+        public string Source { get; set; } = "Order";
         public string? ListingTitle { get; set; }
         public string? Description { get; set; }
         public string? BuyerName { get; set; }

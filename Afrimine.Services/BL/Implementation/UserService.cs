@@ -18,6 +18,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using static Afrimine.Services.DTOs.AuthDto;
 using RoleType = Afrimine.Model.Enums.RoleType;
 
 namespace Afrimine.Services.BL.Implementation
@@ -81,7 +82,8 @@ namespace Afrimine.Services.BL.Implementation
                 Email = user.Email!,
                 PhoneNumber = user.PhoneNumber!,
                 Status = user.Status,
-                Type = user.Type
+                Type = user.Type,
+                AvatarUrl = user.AvatarUrl
             });
         }
 
@@ -564,6 +566,43 @@ namespace Afrimine.Services.BL.Implementation
                 OnboardingStep = profile.OnboardingStep,
                 IsComplete = profile.IsComplete
             });
+        }
+
+        public async Task<ApiResponse<string>> ChangePasswordAsync(string userId, ChangePasswordDto request)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null) return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, 404);
+
+            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            if (!result.Succeeded)
+                return ApiResponse<string>.Fail(
+                    string.Join(", ", result.Errors.Select(e => e.Description)), 400);
+
+            // Invalidate existing sessions by rotating the refresh token
+            user.RefreshToken = null;
+            user.RefreshTokenExpiry = null;
+            await _userManager.UpdateAsync(user);
+
+            return ApiResponse<string>.Ok("Password changed successfully. Please log in again.");
+        }
+
+        public async Task<ApiResponse<string>> UploadProfilePhotoAsync(string userId, ProfilePhotoUploadDto request)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null) return ApiResponse<string>.Fail(ResponseMessages.UserNotFound, 404);
+
+            if (!string.IsNullOrWhiteSpace(user.AvatarPublicId))
+                await _cloudinary.DeleteAsync(user.AvatarPublicId);
+
+            var result = await _cloudinary.UploadImageAsync(request.Photo, $"afrimine/users/{userId}/avatar");
+            if (!result.Success)
+                return ApiResponse<string>.Fail($"Upload failed: {result.Error}", 400);
+
+            user.AvatarUrl = result.Url;
+            user.AvatarPublicId = result.PublicId;
+            await _userManager.UpdateAsync(user);
+
+            return ApiResponse<string>.Ok(result.Url, 200, "Profile photo updated.");
         }
 
         #region Private Methods

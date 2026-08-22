@@ -46,11 +46,13 @@ namespace Afrimine.Repository
             await _context.Users.CountAsync(x => x.Type == RoleType.Vendor);
 
         // ── Listings ───────────────────────────────────────────────────────────
-        public async Task<(IEnumerable<Listing> Items, int TotalCount)> GetListingsAsync(string? status, string? q, int page, int pageSize)
+        public async Task<(IEnumerable<Listing> Items, int TotalCount)> GetListingsAsync(string? status, string? q, Guid? supplierId, int page, int pageSize)
         {
+            // Only ever return listings owned by a Vendor/supplier account — this is the
+            // "supplier listings" refactor: guards against orphaned or non-vendor owners.
             IQueryable<Listing> query = _context.Set<Listing>()
                 .Include(x => x.Owner)
-                .Where(x => !x.IsDeleted);
+                .Where(x => !x.IsDeleted && x.Owner.Type == RoleType.Vendor);
 
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(x => x.Title.Contains(q) || x.Location.Contains(q));
@@ -58,16 +60,38 @@ namespace Afrimine.Repository
             if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<ListingStatus>(status, true, out var statusEnum))
                 query = query.Where(x => x.Status == statusEnum);
 
+            if (supplierId.HasValue)
+            {
+                var supplier = await _context.Set<SupplierProfile>()
+                    .FirstOrDefaultAsync(x => x.Id == supplierId.Value);
+                if (supplier != null)
+                    query = query.Where(x => x.OwnerId == supplier.UserId);
+            }
+
             var total = await query.CountAsync();
             var items = await query.OrderByDescending(x => x.CreatedAt)
                 .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return (items, total);
         }
 
-        public async Task<int> CountListingsByStatusAsync(ListingStatus? status) =>
-            status.HasValue
+        public async Task<Dictionary<string, SupplierProfile>> GetSupplierProfilesByOwnerIdsAsync(IEnumerable<string> ownerIds)
+        {
+            var ids = ownerIds.Distinct().ToList();
+            return await _context.Set<SupplierProfile>()
+                .Where(x => ids.Contains(x.UserId))
+                .GroupBy(x => x.UserId)
+                .Select(g => g.OrderByDescending(x => x.CreatedAt).First())
+                .ToDictionaryAsync(x => x.UserId, x => x);
+        }
+
+        public async Task<int> CountListingsByStatusAsync(ListingStatus? status) => status.HasValue
                 ? await _context.Set<Listing>().CountAsync(x => x.Status == status.Value && !x.IsDeleted)
                 : await _context.Set<Listing>().CountAsync(x => !x.IsDeleted);
+
+    //    public async Task<int> CountListingsByStatusAsync(ListingStatus? status) =>
+    //status.HasValue
+    //    ? await _context.Set<Listing>().CountAsync(x => x.Status == status.Value && !x.IsDeleted && x.Owner.Type == RoleType.Vendor)
+    //    : await _context.Set<Listing>().CountAsync(x => !x.IsDeleted && x.Owner.Type == RoleType.Vendor);
 
         // ── Quotes ─────────────────────────────────────────────────────────────
         public async Task<(IEnumerable<Quote> Items, int TotalCount)> GetQuotesAsync(string? q, string? status, int page, int pageSize)
@@ -260,5 +284,20 @@ namespace Afrimine.Repository
                 .Include(x => x.RaisedBy)
                 .Where(x => x.Status == DisputeStatus.Open)
                 .OrderByDescending(x => x.CreatedAt).Take(count).ToListAsync();
+
+        public async Task<(IEnumerable<Escrow> Items, int TotalCount)> GetEscrowPaymentsAsync(string? status, int page, int pageSize)
+        {
+            IQueryable<Escrow> query = _context.Set<Escrow>()
+                .Include(x => x.Order).ThenInclude(o => o.Buyer)
+                .Include(x => x.Order).ThenInclude(o => o.Vendor);
+
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<EscrowStatus>(status, true, out var statusEnum))
+                query = query.Where(x => x.Status == statusEnum);
+
+            var total = await query.CountAsync();
+            var items = await query.OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (items, total);
+        }
     }
 }

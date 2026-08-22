@@ -418,6 +418,39 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<VendorDashboardDto>.Ok(dashboard);
         }
 
+        public async Task<ApiResponse<string>> DisputeOrderAsync(string vendorId, Guid orderId, DisputeOrderDto request)
+        {
+            var order = await _repository.Order.GetByIdAsync(orderId);
+            if (order is null) return ApiResponse<string>.Fail("Order not found.", 404);
+            if (order.VendorId != vendorId) return ApiResponse<string>.Fail("Access denied.", 403);
+            if (order.Status == OrderStatus.Completed || order.Status == OrderStatus.Cancelled)
+                return ApiResponse<string>.Fail("Cannot dispute a completed or cancelled order.", 409);
+
+            order.Status = OrderStatus.Disputed;
+            order.DisputeReason = request.Reason;
+            order.UpdatedAt = DateTime.UtcNow;
+            _repository.Order.Update(order);
+
+            await _repository.Dispute.Create(new Dispute
+            {
+                OrderId = order.Id,
+                RaisedById = vendorId,
+                Reason = request.Reason,
+                Status = DisputeStatus.Open
+            });
+
+            var escrow = await _repository.Escrow.GetByOrderIdAsync(orderId);
+            if (escrow is not null)
+            {
+                escrow.Status = EscrowStatus.Frozen;
+                escrow.FrozenAt = DateTime.UtcNow;
+                _repository.Escrow.Update(escrow);
+            }
+
+            await _repository.SaveAsync();
+            return ApiResponse<string>.Ok("Dispute raised successfully.");
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private async Task<List<ListingImage>> SaveImagesAsync(Guid listingId, List<IFormFile> files)

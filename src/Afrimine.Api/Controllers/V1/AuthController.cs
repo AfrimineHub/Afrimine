@@ -2,6 +2,7 @@
 using Afrimine.Services.BL.Interfaces;
 using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
+using Afrimine.Shared.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -113,6 +114,22 @@ namespace Afrimine.Api.Controllers.V1
         public async Task<IActionResult> ForgetPassword([FromBody] ChangeForgotPasswordRequestModel request)
         {
             var response = await _service.User.ChangeForgottenPassword(request);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Change password for the currently authenticated user</summary>
+        /// <remarks>
+        /// Requires the current password. On success, the refresh token is revoked —
+        /// the user must log in again with the new password.
+        /// </remarks>
+        [HttpPost("change-password")]
+        [Authorize(Roles = Roles.AllUsers)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
+        {
+            var userId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+            var response = await _service.User.ChangePasswordAsync(userId, request);
             return StatusCode(response.StatusCode, response);
         }
 

@@ -11,6 +11,7 @@ namespace Afrimine.Services.DTOs
         public AccountStatus Status { get; set; }
         public string StatusText => Status.GetDescription();
         public RoleType Type { get; set; }
+        public string? AvatarUrl { get; set; }
     }
 
     public static class Roles

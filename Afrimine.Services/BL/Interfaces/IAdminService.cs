@@ -43,5 +43,6 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<AdminUserListItemDto>> CreateUserAsync(AdminCreateUserDto request);
         Task<ApiResponse<AdminUserListItemDto>> UpdateUserAsync(string userId, AdminUpdateUserDto request);
         Task<ApiResponse<string>> DeleteUserAsync(string userId);
+        Task<ApiResponse<PagedResultDto<AdminEscrowItemDto>>> GetEscrowPaymentsAsync(AdminEscrowQueryDto query);
     }
 }

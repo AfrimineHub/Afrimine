@@ -4,6 +4,8 @@ using Afrimine.Services.Responses;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using static Afrimine.Services.DTOs.SupplierDto;
 
 namespace Afrimine.Api.Controllers
 {
@@ -399,6 +401,38 @@ namespace Afrimine.Api.Controllers
         public async Task<IActionResult> DeleteUser(string userId)
         {
             var response = await _service.Admin.DeleteUserAsync(userId);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Get all escrow payments made on the platform (paginated)</summary>
+        /// <remarks>**status filter:** `pending`, `funded`, `released`, `frozen`, `refunded`</remarks>
+        [HttpGet("escrow")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AdminEscrowItemDto>>), 200)]
+        public async Task<IActionResult> GetEscrowPayments([FromQuery] AdminEscrowQueryDto query)
+        {
+            var response = await _service.Admin.GetEscrowPaymentsAsync(query);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Get all booking milestones across the platform (paginated)</summary>
+        /// <remarks>**status filter:** `Locked`, `Pending`, `Released`</remarks>
+        [HttpGet("milestones")]
+        [ProducesResponseType(typeof(ApiResponse<PagedResultDto<AdminMilestoneItemDto>>), 200)]
+        public async Task<IActionResult> GetMilestones([FromQuery] AdminMilestoneQueryDto query)
+        {
+            var response = await _service.Equipment.GetAllMilestonesAsync(query);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Manually release a booking milestone (SuperAdmin override)</summary>
+        /// <remarks>milestoneNumber must be 1, 2, or 3. Use for stuck payments or dispute resolutions.</remarks>
+        [HttpPost("milestones/{bookingId:guid}/release/{milestoneNumber:int}")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> ReleaseMilestone(Guid bookingId, int milestoneNumber)
+        {
+            var adminId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(adminId)) return Unauthorized();
+            var response = await _service.Equipment.AdminReleaseMilestoneAsync(adminId, bookingId, milestoneNumber);
             return StatusCode(response.StatusCode, response);
         }
     }

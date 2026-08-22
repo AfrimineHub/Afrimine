@@ -187,34 +187,58 @@ namespace Afrimine.Services.BL.Implementation
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user is null) return ApiResponse<string>.Fail("User not found.", 404);
+
             user.Status = AccountStatus.Active;
             user.SuspendedReason = null;
             user.BannedReason = null;
-            await _userManager.UpdateAsync(user);
+
+            // Undo everything DeleteUserAsync (soft-delete) / suspension may have set,
+            // otherwise the account still fails login (403) even though Status is Active:
+            // - EmailConfirmed=false blocks ValidateUser's confirmation check
+            // - LockoutEnd in the future blocks CheckPasswordSignInAsync regardless of password
+            user.EmailConfirmed = true;
+            user.LockoutEnd = null;
+            await _userManager.SetLockoutEndDateAsync(user, null);
+            await _userManager.ResetAccessFailedCountAsync(user);
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return ApiResponse<string>.Fail(string.Join(", ", result.Errors.Select(e => e.Description)), 400);
+
             return ApiResponse<string>.Ok("User reactivated.");
         }
-
         // ── Listings ──────────────────────────────────────────────────────────
-        public async Task<ApiResponse<PagedResultDto<AdminListingListItemDto>>> GetListingsAsync(
-            AdminListingQueryDto query)
+        public async Task<ApiResponse<PagedResultDto<AdminListingListItemDto>>> GetListingsAsync(AdminListingQueryDto query)
         {
-            var (items, total) = await _admin.GetListingsAsync(query.Status, query.Q, query.Page, query.PageSize);
+            var (items, total) = await _admin.GetListingsAsync(query.Status, query.Q, query.SupplierId, query.Page, query.PageSize);
+            var itemsList = items.ToList();
+
+            var supplierMap = await _admin.GetSupplierProfilesByOwnerIdsAsync(itemsList.Select(l => l.OwnerId));
+
             return ApiResponse<PagedResultDto<AdminListingListItemDto>>.Ok(new PagedResultDto<AdminListingListItemDto>
             {
-                Items = items.Select(l => new AdminListingListItemDto
+                Items = itemsList.Select(l =>
                 {
-                    Id = l.Id.ToString(),
-                    Title = l.Title,
-                    Category = l.CategoryType.ToString(),
-                    Location = l.Location,
-                    SellerName = l.Owner?.FullName,
-                    Price = string.IsNullOrWhiteSpace(l.PriceDescription)
-                        ? $"{l.PriceCurrency} {l.PriceAmount:N0}"
-                        : l.PriceDescription,
-                    PriceAmount = l.PriceAmount,
-                    Currency = l.PriceCurrency,
-                    Status = l.Status.ToString().ToLower(),
-                    CreatedAt = l.CreatedAt.ToString("O")
+                    supplierMap.TryGetValue(l.OwnerId, out var supplier);
+                    return new AdminListingListItemDto
+                    {
+                        Id = l.Id.ToString(),
+                        Title = l.Title,
+                        Category = l.CategoryType.ToString(),
+                        Location = l.Location,
+                        SellerName = l.Owner?.FullName,
+                        SellerEmail = l.Owner?.Email,
+                        SupplierId = supplier?.Id.ToString(),
+                        CompanyName = supplier?.CompanyName,
+                        VendorType = supplier?.VendorType.ToString(),
+                        Price = string.IsNullOrWhiteSpace(l.PriceDescription)
+                            ? $"{l.PriceAmount} {l.PriceCurrency}".Trim()
+                            : l.PriceDescription,
+                        PriceAmount = l.PriceAmount,
+                        Currency = l.PriceCurrency,
+                        Status = l.Status.ToString(),
+                        CreatedAt = l.CreatedAt.ToString("O")
+                    };
                 }),
                 TotalCount = total,
                 Page = query.Page,
@@ -308,10 +332,27 @@ namespace Afrimine.Services.BL.Implementation
         // ── Orders ────────────────────────────────────────────────────────────
         public async Task<ApiResponse<PagedResultDto<AdminOrderListItemDto>>> GetOrdersAsync(AdminOrderQueryDto query)
         {
-            var (items, total) = await _admin.GetOrdersAsync(query.Q, query.Status, query.Page, query.PageSize);
+            // Pull both sources in full (admin volumes are modest) and merge in-memory
+            // so pagination/sorting is consistent across the combined feed.
+            var (orders, _) = await _admin.GetOrdersAsync(query.Q, query.Status, 1, int.MaxValue);
+
+            BookingStatus? bookingStatus = null;
+            if (!string.IsNullOrWhiteSpace(query.Status) && Enum.TryParse<BookingStatus>(query.Status, true, out var bs))
+                bookingStatus = bs;
+
+            var (bookings, _) = await _equipment.GetAllBookingsAdminAsync(query.Q, bookingStatus, 1, int.MaxValue);
+
+            var merged = orders.Select(MapOrderToListItem)
+                .Concat(bookings.Select(MapBookingToListItem))
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+
+            var total = merged.Count;
+            var page = merged.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToList();
+
             return ApiResponse<PagedResultDto<AdminOrderListItemDto>>.Ok(new PagedResultDto<AdminOrderListItemDto>
             {
-                Items = items.Select(MapToOrderListItem),
+                Items = page,
                 TotalCount = total,
                 Page = query.Page,
                 PageSize = query.PageSize
@@ -333,24 +374,14 @@ namespace Afrimine.Services.BL.Implementation
         public async Task<ApiResponse<AdminOrderDetailDto>> GetOrderDetailAsync(Guid orderId)
         {
             var order = await _admin.GetOrderDetailAsync(orderId);
-            if (order is null) return ApiResponse<AdminOrderDetailDto>.Fail("Order not found.", 404);
+            if (order != null)
+                return ApiResponse<AdminOrderDetailDto>.Ok(MapOrderToDetail(order));
 
-            return ApiResponse<AdminOrderDetailDto>.Ok(new AdminOrderDetailDto
-            {
-                Id = order.Id.ToString(),
-                ListingTitle = order.Listing?.Title,
-                Description = order.Listing?.Description,
-                BuyerName = order.Buyer?.FullName,
-                BuyerEmail = order.Buyer?.Email,
-                VendorName = order.Vendor?.FullName,
-                VendorEmail = order.Vendor?.Email,
-                Amount = order.Amount,
-                Currency = order.Currency,
-                Status = order.Status.ToString().ToLower(),
-                CreatedAt = order.CreatedAt.ToString("O"),
-                Timeline = BuildTimeline(order),
-                Documents = new List<AdminOrderDocumentDto>()
-            });
+            var booking = await _equipment.GetBookingByIdAdminAsync(orderId);
+            if (booking != null)
+                return ApiResponse<AdminOrderDetailDto>.Ok(MapBookingToDetail(booking));
+
+            return ApiResponse<AdminOrderDetailDto>.Fail("Order/booking not found.", 404);
         }
 
         // ── Revenue ───────────────────────────────────────────────────────────
@@ -769,40 +800,66 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("User suspended successfully.");
         }
 
+        public async Task<ApiResponse<PagedResultDto<AdminEscrowItemDto>>> GetEscrowPaymentsAsync(AdminEscrowQueryDto query)
+        {
+            var (items, total) = await _admin.GetEscrowPaymentsAsync(query.Status, query.Page, query.PageSize);
+            return ApiResponse<PagedResultDto<AdminEscrowItemDto>>.Ok(new PagedResultDto<AdminEscrowItemDto>
+            {
+                Items = items.Select(e => new AdminEscrowItemDto
+                {
+                    Id = e.Id.ToString(),
+                    OrderId = e.OrderId.ToString(),
+                    BuyerName = e.Order?.Buyer?.FullName,
+                    VendorName = e.Order?.Vendor?.FullName,
+                    Amount = e.Amount,
+                    Currency = e.Currency,
+                    Status = e.Status.ToString(),
+                    PaymentReference = e.PaymentReference,
+                    FundedAt = e.FundedAt?.ToString("O"),
+                    ReleasedAt = e.ReleasedAt?.ToString("O"),
+                    CreatedAt = e.CreatedAt.ToString("O")
+                }),
+                TotalCount = total,
+                Page = query.Page,
+                PageSize = query.PageSize
+            });
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
-        private static AdminOrderListItemDto MapToOrderListItem(Afrimine.Model.Entities.Order o) => new()
+
+        private static AdminOrderListItemDto MapOrderToListItem(Afrimine.Model.Entities.Order o) => new()
         {
             Id = o.Id.ToString(),
+            Source = "Order",
             ListingTitle = o.Listing?.Title,
-            Description = o.Listing?.Description,
             BuyerName = o.Buyer?.FullName,
             BuyerEmail = o.Buyer?.Email,
             VendorName = o.Vendor?.FullName,
             VendorEmail = o.Vendor?.Email,
             Amount = o.Amount,
             Currency = o.Currency,
-            Status = o.Status.ToString().ToLower(),
+            Status = o.Status.ToString(),
             CreatedAt = o.CreatedAt.ToString("O")
         };
 
-        private static List<AdminOrderTimelineItemDto> BuildTimeline(Afrimine.Model.Entities.Order o)
-        {
-            var now = DateTime.UtcNow;
-            return new List<AdminOrderTimelineItemDto>
-            {
-                new() { Step = "Order Placed",
-                    OccurredAt = o.CreatedAt.ToString("O"),
-                    Status = "completed" },
-                new() { Step = "Payment", OccurredAt = (o.PaidAt ?? now).ToString("O"),
-                    Status = o.PaidAt.HasValue ? "completed" : o.Status == OrderStatus.Pending ? "current" : "pending" },
-                new() { Step = "In Escrow", OccurredAt = (o.PaidAt ?? now).ToString("O"),
-                    Status = o.Status >= OrderStatus.Paid ? "completed" : o.Status == OrderStatus.Paid ? "current" : "pending" },
-                new() { Step = "Delivered", OccurredAt = (o.DeliveredAt ?? now).ToString("O"),
-                    Status = o.DeliveredAt.HasValue ? "completed" : o.Status == OrderStatus.Delivered ? "current" : "pending" },
-                new() { Step = "Completed", OccurredAt = now.ToString("O"),
-                    Status = o.Status == OrderStatus.Completed ? "completed" : o.Status == OrderStatus.Delivered ? "current" : "pending" }
-            };
-        }
+        //private static List<AdminOrderTimelineItemDto> BuildTimeline(Afrimine.Model.Entities.Order o)
+        //{
+        //    var now = DateTime.UtcNow;
+        //    return new List<AdminOrderTimelineItemDto>
+        //    {
+        //        new() { Step = "Order Placed",
+        //            OccurredAt = o.CreatedAt.ToString("O"),
+        //            Status = "completed" },
+        //        new() { Step = "Payment", OccurredAt = (o.PaidAt ?? now).ToString("O"),
+        //            Status = o.PaidAt.HasValue ? "completed" : o.Status == OrderStatus.Pending ? "current" : "pending" },
+        //        new() { Step = "In Escrow", OccurredAt = (o.PaidAt ?? now).ToString("O"),
+        //            Status = o.Status >= OrderStatus.Paid ? "completed" : o.Status == OrderStatus.Paid ? "current" : "pending" },
+        //        new() { Step = "Delivered", OccurredAt = (o.DeliveredAt ?? now).ToString("O"),
+        //            Status = o.DeliveredAt.HasValue ? "completed" : o.Status == OrderStatus.Delivered ? "current" : "pending" },
+        //        new() { Step = "Completed", OccurredAt = now.ToString("O"),
+        //            Status = o.Status == OrderStatus.Completed ? "completed" : o.Status == OrderStatus.Delivered ? "current" : "pending" }
+        //    };
+        //}
 
         private static string TimeAgo(DateTime dt)
         {
@@ -812,5 +869,103 @@ namespace Afrimine.Services.BL.Implementation
             if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}hr ago";
             return $"{(int)diff.TotalDays}d ago";
         }
+
+        private static AdminOrderListItemDto MapBookingToListItem(Booking b) => new()
+        {
+            Id = b.Id.ToString(),
+            Source = "Booking",
+            ListingTitle = b.Asset?.Brand,
+            BuyerName = b.Miner?.FullName,
+            BuyerEmail = b.Miner?.Email,
+            VendorName = b.Supplier?.CompanyName,
+            VendorEmail = b.Supplier?.BusinessEmail,
+            Amount = b.TotalAmount,
+            Currency = b.Currency,
+            Status = b.Status.ToString(),
+            CreatedAt = b.CreatedAt.ToString("O")
+        };
+
+        private static AdminOrderDetailDto MapOrderToDetail(Afrimine.Model.Entities.Order o)
+        {
+            var dto = MapOrderToListItem(o);
+            return new AdminOrderDetailDto
+            {
+                Id = dto.Id,
+                Source = dto.Source,
+                ListingTitle = dto.ListingTitle,
+                BuyerName = dto.BuyerName,
+                BuyerEmail = dto.BuyerEmail,
+                VendorName = dto.VendorName,
+                VendorEmail = dto.VendorEmail,
+                Amount = dto.Amount,
+                Currency = dto.Currency,
+                Status = dto.Status,
+                CreatedAt = dto.CreatedAt,
+                Timeline = BuildOrderTimeline(o)
+            };
+        }
+
+        private static AdminOrderDetailDto MapBookingToDetail(Booking b)
+        {
+            var dto = MapBookingToListItem(b);
+            return new AdminOrderDetailDto
+            {
+                Id = dto.Id,
+                Source = dto.Source,
+                ListingTitle = dto.ListingTitle,
+                BuyerName = dto.BuyerName,
+                BuyerEmail = dto.BuyerEmail,
+                VendorName = dto.VendorName,
+                VendorEmail = dto.VendorEmail,
+                Amount = dto.Amount,
+                Currency = dto.Currency,
+                Status = dto.Status,
+                CreatedAt = dto.CreatedAt,
+                Timeline = new List<AdminOrderTimelineItemDto>
+        {
+            new() 
+            { 
+                Step = "Milestone 1 (20%)",
+                Status = b.Milestone1Status.ToString(),
+                OccurredAt = b.Milestone1ReleasedAt?.ToString("O") ?? ""
+            },
+            new() 
+            { 
+                Step = "Milestone 2 (40%)", 
+                Status = b.Milestone2Status.ToString(),
+                OccurredAt = b.Milestone2ReleasedAt?.ToString("O") ?? "" 
+            },
+            new() 
+            { 
+                Step = "Milestone 3 (40%)",
+                Status = b.Milestone3Status.ToString(),
+                OccurredAt = b.Milestone3ReleasedAt?.ToString("O") ?? "" 
+            }
+        }
+            };
+        }
+
+        private static List<AdminOrderTimelineItemDto> BuildOrderTimeline(Afrimine.Model.Entities.Order o) => new()
+        {
+            new() 
+            {
+                Step = "Order Placed",
+                Status = "completed", 
+                OccurredAt = o.CreatedAt.ToString("O")
+            },
+            new() 
+            {
+                Step = "Payment",
+                Status = o.PaidAt.HasValue ? "completed" : "pending",
+                OccurredAt = o.PaidAt?.ToString("O") ?? "" 
+            },
+            new() 
+            { 
+                Step = "Delivered", 
+                Status = o.DeliveredAt.HasValue ? "completed" : "pending",
+                OccurredAt = o.DeliveredAt?.ToString("O") ?? ""
+            }
+        };
+
     }
 }
