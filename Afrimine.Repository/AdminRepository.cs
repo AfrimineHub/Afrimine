@@ -88,10 +88,6 @@ namespace Afrimine.Repository
                 ? await _context.Set<Listing>().CountAsync(x => x.Status == status.Value && !x.IsDeleted)
                 : await _context.Set<Listing>().CountAsync(x => !x.IsDeleted);
 
-    //    public async Task<int> CountListingsByStatusAsync(ListingStatus? status) =>
-    //status.HasValue
-    //    ? await _context.Set<Listing>().CountAsync(x => x.Status == status.Value && !x.IsDeleted && x.Owner.Type == RoleType.Vendor)
-    //    : await _context.Set<Listing>().CountAsync(x => !x.IsDeleted && x.Owner.Type == RoleType.Vendor);
 
         // ── Quotes ─────────────────────────────────────────────────────────────
         public async Task<(IEnumerable<Quote> Items, int TotalCount)> GetQuotesAsync(string? q, string? status, int page, int pageSize)
@@ -412,5 +408,9 @@ namespace Afrimine.Repository
                 }
             });
         }
+
+        public async Task<int> CountAssetsByStatusAsync(AssetStatus? status) => status.HasValue
+            ? await _context.Set<Asset>().CountAsync(x => x.Status == status.Value && !x.IsDeleted)
+            : await _context.Set<Asset>().CountAsync(x => !x.IsDeleted);
     }
 }

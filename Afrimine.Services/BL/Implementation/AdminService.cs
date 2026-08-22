@@ -208,53 +208,155 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("User reactivated.");
         }
         // ── Listings ──────────────────────────────────────────────────────────
+        //public async Task<ApiResponse<PagedResultDto<AdminListingListItemDto>>> GetListingsAsync(AdminListingQueryDto query)
+        //{
+        //    var (items, total) = await _admin.GetListingsAsync(query.Status, query.Q, query.SupplierId, query.Page, query.PageSize);
+        //    var itemsList = items.ToList();
+
+        //    var supplierMap = await _admin.GetSupplierProfilesByOwnerIdsAsync(itemsList.Select(l => l.OwnerId));
+
+        //    return ApiResponse<PagedResultDto<AdminListingListItemDto>>.Ok(new PagedResultDto<AdminListingListItemDto>
+        //    {
+        //        Items = itemsList.Select(l =>
+        //        {
+        //            supplierMap.TryGetValue(l.OwnerId, out var supplier);
+        //            return new AdminListingListItemDto
+        //            {
+        //                Id = l.Id.ToString(),
+        //                Title = l.Title,
+        //                Category = l.CategoryType.ToString(),
+        //                Location = l.Location,
+        //                SellerName = l.Owner?.FullName,
+        //                SellerEmail = l.Owner?.Email,
+        //                SupplierId = supplier?.Id.ToString(),
+        //                CompanyName = supplier?.CompanyName,
+        //                VendorType = supplier?.VendorType.ToString(),
+        //                Price = string.IsNullOrWhiteSpace(l.PriceDescription)
+        //                    ? $"{l.PriceAmount} {l.PriceCurrency}".Trim()
+        //                    : l.PriceDescription,
+        //                PriceAmount = l.PriceAmount,
+        //                Currency = l.PriceCurrency,
+        //                Status = l.Status.ToString(),
+        //                CreatedAt = l.CreatedAt.ToString("O")
+        //            };
+        //        }),
+        //        TotalCount = total,
+        //        Page = query.Page,
+        //        PageSize = query.PageSize
+        //    });
+        //}
+
         public async Task<ApiResponse<PagedResultDto<AdminListingListItemDto>>> GetListingsAsync(AdminListingQueryDto query)
         {
-            var (items, total) = await _admin.GetListingsAsync(query.Status, query.Q, query.SupplierId, query.Page, query.PageSize);
+            // Pull both catalogs in full and merge in-memory so pagination/sorting stays
+            // consistent across "Listing" (marketplace) and "Asset" (equipment) records.
+            var (items, _) = await _admin.GetListingsAsync(query.Status, query.Q, query.SupplierId, 1, int.MaxValue);
             var itemsList = items.ToList();
-
             var supplierMap = await _admin.GetSupplierProfilesByOwnerIdsAsync(itemsList.Select(l => l.OwnerId));
+
+            AssetStatus? assetStatus = null;
+            if (!string.IsNullOrWhiteSpace(query.Status) && Enum.TryParse<AssetStatus>(query.Status, true, out var st))
+                assetStatus = st;
+
+            var (assets, _) = await _equipment.GetAllAssetsAdminAsync(query.Q, assetStatus, 1, int.MaxValue);
+            var assetList = assets.ToList();
+            if (query.SupplierId.HasValue)
+                assetList = assetList.Where(a => a.SupplierId == query.SupplierId.Value).ToList();
+
+            var mappedListings = itemsList.Select(l =>
+            {
+                supplierMap.TryGetValue(l.OwnerId, out var supplier);
+                return new AdminListingListItemDto
+                {
+                    Id = l.Id.ToString(),
+                    Source = "Listing",
+                    Title = l.Title,
+                    Category = l.CategoryType.ToString(),
+                    Location = l.Location,
+                    SellerName = l.Owner?.FullName,
+                    SellerEmail = l.Owner?.Email,
+                    SupplierId = supplier?.Id.ToString(),
+                    CompanyName = supplier?.CompanyName,
+                    VendorType = supplier?.VendorType.ToString(),
+                    Price = string.IsNullOrWhiteSpace(l.PriceDescription)
+                        ? $"{l.PriceAmount} {l.PriceCurrency}".Trim()
+                        : l.PriceDescription,
+                    PriceAmount = l.PriceAmount,
+                    Currency = l.PriceCurrency,
+                    Status = l.Status.ToString(),
+                    CreatedAt = l.CreatedAt.ToString("O")
+                };
+            });
+
+            var mappedAssets = assetList.Select(a => new AdminListingListItemDto
+            {
+                Id = a.Id.ToString(),
+                Source = "Asset",
+                Title = $"{a.Brand} {a.Model} ({a.MachineType})",
+                Category = a.MachineType.ToString(),
+                Location = a.Supplier?.PrimaryBaseCity,
+                SellerName = a.Supplier?.User?.FullName,
+                SellerEmail = a.Supplier?.BusinessEmail ?? a.Supplier?.User?.Email,
+                SupplierId = a.SupplierId.ToString(),
+                CompanyName = a.Supplier?.CompanyName,
+                VendorType = a.Supplier?.VendorType.ToString(),
+                Price = $"{a.DailyRentalRate}/day",
+                PriceAmount = a.DailyRentalRate,
+                Currency = "NGN",
+                Status = a.Status.ToString(),
+                CreatedAt = a.CreatedAt.ToString("O")
+            });
+
+            var merged = mappedListings.Concat(mappedAssets)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+
+            var total = merged.Count;
+            var page = merged.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToList();
 
             return ApiResponse<PagedResultDto<AdminListingListItemDto>>.Ok(new PagedResultDto<AdminListingListItemDto>
             {
-                Items = itemsList.Select(l =>
-                {
-                    supplierMap.TryGetValue(l.OwnerId, out var supplier);
-                    return new AdminListingListItemDto
-                    {
-                        Id = l.Id.ToString(),
-                        Title = l.Title,
-                        Category = l.CategoryType.ToString(),
-                        Location = l.Location,
-                        SellerName = l.Owner?.FullName,
-                        SellerEmail = l.Owner?.Email,
-                        SupplierId = supplier?.Id.ToString(),
-                        CompanyName = supplier?.CompanyName,
-                        VendorType = supplier?.VendorType.ToString(),
-                        Price = string.IsNullOrWhiteSpace(l.PriceDescription)
-                            ? $"{l.PriceAmount} {l.PriceCurrency}".Trim()
-                            : l.PriceDescription,
-                        PriceAmount = l.PriceAmount,
-                        Currency = l.PriceCurrency,
-                        Status = l.Status.ToString(),
-                        CreatedAt = l.CreatedAt.ToString("O")
-                    };
-                }),
+                Items = page,
                 TotalCount = total,
                 Page = query.Page,
                 PageSize = query.PageSize
             });
         }
 
+        //public async Task<ApiResponse<AdminListingCountsDto>> GetListingCountsAsync()
+        //{
+        //    return ApiResponse<AdminListingCountsDto>.Ok(new AdminListingCountsDto
+        //    {
+        //        All = await _admin.CountListingsByStatusAsync(null),
+        //        Pending = await _admin.CountListingsByStatusAsync(ListingStatus.PendingReview),
+        //        Approved = await _admin.CountListingsByStatusAsync(ListingStatus.Active),
+        //        Rejected = await _admin.CountListingsByStatusAsync(ListingStatus.Rejected),
+        //        Flagged = await _admin.CountListingsByStatusAsync(ListingStatus.Flagged)
+        //    });
+        //}
+
         public async Task<ApiResponse<AdminListingCountsDto>> GetListingCountsAsync()
         {
+            var totalListings = await _admin.CountListingsByStatusAsync(null);
+            var totalAssets = await _admin.CountAssetsByStatusAsync(null);
+
             return ApiResponse<AdminListingCountsDto>.Ok(new AdminListingCountsDto
             {
-                All = await _admin.CountListingsByStatusAsync(null),
+                All = totalListings + totalAssets,
                 Pending = await _admin.CountListingsByStatusAsync(ListingStatus.PendingReview),
                 Approved = await _admin.CountListingsByStatusAsync(ListingStatus.Active),
                 Rejected = await _admin.CountListingsByStatusAsync(ListingStatus.Rejected),
-                Flagged = await _admin.CountListingsByStatusAsync(ListingStatus.Flagged)
+                Flagged = await _admin.CountListingsByStatusAsync(ListingStatus.Flagged),
+
+                // ── Asset-table breakdown (new) ──
+                AvailableAssets = await _admin.CountAssetsByStatusAsync(AssetStatus.Available),
+                RentedAssets = await _admin.CountAssetsByStatusAsync(AssetStatus.Rented),
+                UnderMaintenanceAssets = await _admin.CountAssetsByStatusAsync(AssetStatus.UnderMaintenance),
+                InactiveAssets = await _admin.CountAssetsByStatusAsync(AssetStatus.Inactive),
+
+                // ── Split totals, in case the frontend wants to show them separately ──
+                TotalListings = totalListings,
+                TotalAssets = totalAssets
             });
         }
 

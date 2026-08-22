@@ -148,7 +148,7 @@ namespace Afrimine.Repository
                 .Where(x => x.Wallet.SupplierId == supplierId)
                 .OrderByDescending(x => x.CreatedAt).ToListAsync();
 
-        public async Task<(IEnumerable<Asset> Items, int TotalCount)> SearchAssetsAsync(string? q, MachineType? machineType, string? location,decimal? maxDailyRate, bool availableOnly,int page, int pageSize)
+        public async Task<(IEnumerable<Asset> Items, int TotalCount)> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly, int page, int pageSize)
         {
             IQueryable<Asset> query = _context.Set<Asset>()
                 .Include(x => x.Supplier)
@@ -190,7 +190,7 @@ namespace Afrimine.Repository
             return (items, total);
         }
 
-        public void DeleteSupplierProfile(SupplierProfile profile) => 
+        public void DeleteSupplierProfile(SupplierProfile profile) =>
             _context.Set<SupplierProfile>().Remove(profile);
 
         public void DeleteWallet(SupplierWallet wallet) =>
@@ -228,5 +228,26 @@ namespace Afrimine.Repository
                 .Include(x => x.Supplier)
                 .Include(x => x.Disputes)
                 .FirstOrDefaultAsync(x => x.Id == bookingId && !x.IsDeleted);
+
+
+        public async Task<(IEnumerable<Asset> Items, int TotalCount)> GetAllAssetsAdminAsync(string? q, AssetStatus? status, int page, int pageSize)
+        {
+            IQueryable<Asset> query = _context.Set<Asset>()
+                .Include(a => a.Supplier).ThenInclude(s => s.User)
+                .Where(a => !a.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(a => a.Brand.Contains(q) || a.Model.Contains(q)
+                    || (a.Supplier.CompanyName != null && a.Supplier.CompanyName.Contains(q)));
+
+            if (status.HasValue)
+                query = query.Where(a => a.Status == status.Value);
+
+            var total = await query.CountAsync();
+            var items = await query.OrderByDescending(a => a.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (items, total);
+        }
     }
 }
+    

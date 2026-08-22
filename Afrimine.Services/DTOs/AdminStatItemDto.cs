@@ -93,6 +93,7 @@ namespace Afrimine.Services.DTOs
         public string Id { get; set; } = string.Empty;
         public string? Title { get; set; }
         public string? Category { get; set; }
+        public string Source { get; set; } = "Listing";   // "Listing" or "Asset"
         public string? Location { get; set; }
         public string? SellerName { get; set; }
         public string? SellerEmail { get; set; }      
@@ -113,6 +114,15 @@ namespace Afrimine.Services.DTOs
         public int Approved { get; set; }
         public int Rejected { get; set; }
         public int Flagged { get; set; }
+        public int AvailableAssets { get; set; }
+        public int RentedAssets { get; set; }
+        public int UnderMaintenanceAssets { get; set; }
+        public int InactiveAssets { get; set; }
+        public int TotalListings { get; set; }
+        public int TotalAssets { get; set; }
+        public int GrandTotal { get; set; }
+        public int Draft { get; set; }
+        public int Published { get; set; }
     }
 
     public class AdminListingQueryDto

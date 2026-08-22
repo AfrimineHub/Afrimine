@@ -55,5 +55,6 @@ namespace Afrimine.Repository
         // Admin
         Task<(IEnumerable<Booking> Items, int TotalCount)> GetAllBookingsAdminAsync(string? q, BookingStatus? status, int page, int pageSize);
         Task<Booking?> GetBookingByIdAdminAsync(Guid bookingId);
+        Task<(IEnumerable<Asset> Items, int TotalCount)> GetAllAssetsAdminAsync(string? q, AssetStatus? status, int page, int pageSize);
     }
 }
