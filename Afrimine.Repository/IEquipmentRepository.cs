@@ -51,6 +51,9 @@ namespace Afrimine.Repository
 
         void DeleteSupplierProfile(SupplierProfile profile);
         void DeleteWallet(SupplierWallet wallet);
-        void DeleteAsset(Asset asset); 
+        void DeleteAsset(Asset asset);
+        // Admin
+        Task<(IEnumerable<Booking> Items, int TotalCount)> GetAllBookingsAdminAsync(string? q, BookingStatus? status, int page, int pageSize);
+        Task<Booking?> GetBookingByIdAdminAsync(Guid bookingId);
     }
 }

@@ -19,5 +19,6 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<PagedResultDto<VendorOrderDto>>> GetOrdersAsync(string vendorId, VendorOrderQueryDto query);
         Task<ApiResponse<PagedResultDto<ListingPerformanceItemDto>>> GetListingsPerformanceAsync(string vendorId, int page, int pageSize);
         Task<ApiResponse<VendorDashboardDto>> GetVendorDashboardAsync(string vendorId);
+        Task<ApiResponse<string>> DisputeOrderAsync(string vendorId, Guid orderId, DisputeOrderDto request);
     }
 }

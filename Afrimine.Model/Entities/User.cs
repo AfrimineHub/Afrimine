@@ -14,6 +14,8 @@ namespace Afrimine.Model.Entities
         public RoleType Type { get; set; }
         public string? SuspendedReason { get; set; }
         public string? BannedReason { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? AvatarPublicId { get; set; }
     }
 }
                                                       

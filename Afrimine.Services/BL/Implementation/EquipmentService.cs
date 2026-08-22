@@ -1035,6 +1035,59 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             });
         }
 
+        public async Task<ApiResponse<PagedResultDto<AdminMilestoneItemDto>>> GetAllMilestonesAsync(AdminMilestoneQueryDto query)
+        {
+            var (bookings, _) = await _equipment.GetAllBookingsAdminAsync(null, null, 1, int.MaxValue);
+
+            var all = new List<AdminMilestoneItemDto>();
+            foreach (var b in bookings)
+            {
+                all.Add(new AdminMilestoneItemDto { BookingId = b.Id.ToString(), MilestoneNumber = 1, Name = "Site Arrival (20%)", Amount = b.Milestone1Amount, Status = b.Milestone1Status.ToString(), ReleasedAt = b.Milestone1ReleasedAt?.ToString("O"), MinerName = b.Miner?.FullName, SupplierName = b.Supplier?.CompanyName, BookingStatus = b.Status.ToString() });
+                all.Add(new AdminMilestoneItemDto { BookingId = b.Id.ToString(), MilestoneNumber = 2, Name = "Mid-Term (40%)", Amount = b.Milestone2Amount, Status = b.Milestone2Status.ToString(), ReleasedAt = b.Milestone2ReleasedAt?.ToString("O"), MinerName = b.Miner?.FullName, SupplierName = b.Supplier?.CompanyName, BookingStatus = b.Status.ToString() });
+                all.Add(new AdminMilestoneItemDto { BookingId = b.Id.ToString(), MilestoneNumber = 3, Name = "Completion (40%)", Amount = b.Milestone3Amount, Status = b.Milestone3Status.ToString(), ReleasedAt = b.Milestone3ReleasedAt?.ToString("O"), MinerName = b.Miner?.FullName, SupplierName = b.Supplier?.CompanyName, BookingStatus = b.Status.ToString() });
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Status))
+                all = all.Where(x => x.Status.Equals(query.Status, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            var total = all.Count;
+            var page = all.OrderByDescending(x => x.ReleasedAt)
+                .Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToList();
+
+            return ApiResponse<PagedResultDto<AdminMilestoneItemDto>>.Ok(new PagedResultDto<AdminMilestoneItemDto>
+            {
+                Items = page,
+                TotalCount = total,
+                Page = query.Page,
+                PageSize = query.PageSize
+            });
+        }
+
+        public async Task<ApiResponse<string>> AdminReleaseMilestoneAsync(string adminId, Guid bookingId, int milestoneNumber)
+        {
+            if (milestoneNumber is < 1 or > 3)
+                return ApiResponse<string>.Fail("milestoneNumber must be 1, 2 or 3.", 400);
+
+            var booking = await _equipment.GetBookingDetailAsync(bookingId);
+            if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
+
+            var currentStatus = milestoneNumber switch
+            {
+                1 => booking.Milestone1Status,
+                2 => booking.Milestone2Status,
+                3 => booking.Milestone3Status,
+                _ => MilestoneStatus.Locked
+            };
+            if (currentStatus == MilestoneStatus.Released)
+                return ApiResponse<string>.Fail("This milestone has already been released.", 409);
+
+            await ReleaseMilestoneAsync(booking, milestoneNumber);
+            _equipment.UpdateBooking(booking);
+            await _repository.SaveAsync();
+
+            return ApiResponse<string>.Ok($"Milestone {milestoneNumber} manually released by admin.");
+        }
+
 
         // ── Private helpers ───────────────────────────────────────────────────
         private async Task ReleaseMilestoneAsync(Booking booking, int milestoneNumber)

@@ -251,5 +251,20 @@ namespace Afrimine.Api.Controllers.V1
             var response = await _service.VendorListing.GetVendorDashboardAsync(vendorId);
             return StatusCode(response.StatusCode, response);
         }
+
+        /// <summary>Raise a dispute on an order (Vendor only)</summary>
+        /// <remarks>
+        /// Opens a dispute that freezes the escrow until admin resolves it.
+        /// Cannot dispute completed or cancelled orders.
+        /// </remarks>
+        [HttpPost("/api/v{version:apiVersion}/vendor/orders/{id:guid}/dispute")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> DisputeOrder(Guid id, [FromBody] DisputeOrderDto request)
+        {
+            var vendorId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(vendorId)) return Unauthorized();
+            var response = await _service.VendorListing.DisputeOrderAsync(vendorId, id, request);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

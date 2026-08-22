@@ -5,6 +5,7 @@ using Afrimine.Shared.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using static Afrimine.Services.DTOs.AuthDto;
 
 namespace Afrimine.Api.Controllers.V1
 {
@@ -43,6 +44,19 @@ namespace Afrimine.Api.Controllers.V1
         {
             var userId = HttpContext.User.GetLoggedInUserId();
             var response = await _service.User.GetCurrentUser(userId);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Upload/replace the current user's profile photo</summary>
+        /// <remarks>Send as multipart/form-data with a `photo` file field. Replaces any existing photo.</remarks>
+        [HttpPost("profile-photo")]
+        [Authorize(Roles = Roles.AllUsers)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> UploadProfilePhoto([FromForm] ProfilePhotoUploadDto request)
+        {
+            var userId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+            var response = await _service.User.UploadProfilePhotoAsync(userId, request);
             return StatusCode(response.StatusCode, response);
         }
     }

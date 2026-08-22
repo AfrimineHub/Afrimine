@@ -137,8 +137,7 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("Delivery confirmed.");
         }
 
-        public async Task<ApiResponse<string>> DisputeOrderAsync(
-            string buyerId, Guid orderId, DisputeOrderDto request)
+        public async Task<ApiResponse<string>> DisputeOrderAsync(string buyerId, Guid orderId, DisputeOrderDto request)
         {
             var order = await _repository.Order.GetByIdAsync(orderId);
             if (order is null) return ApiResponse<string>.Fail("Order not found.", 404);
@@ -150,13 +149,28 @@ namespace Afrimine.Services.BL.Implementation
             order.DisputeReason = request.Reason;
             order.UpdatedAt = DateTime.UtcNow;
             _repository.Order.Update(order);
-            await _repository.SaveAsync();
 
+            await _repository.Dispute.Create(new Dispute
+            {
+                OrderId = order.Id,
+                RaisedById = buyerId,
+                Reason = request.Reason,
+                Status = DisputeStatus.Open
+            });
+
+            var escrow = await _repository.Escrow.GetByOrderIdAsync(orderId);
+            if (escrow is not null)
+            {
+                escrow.Status = EscrowStatus.Frozen;
+                escrow.FrozenAt = DateTime.UtcNow;
+                _repository.Escrow.Update(escrow);
+            }
+
+            await _repository.SaveAsync();
             return ApiResponse<string>.Ok("Dispute raised successfully.");
         }
 
-        public async Task<ApiResponse<string>> PayOrderAsync(
-            string buyerId, Guid orderId, PayOrderDto request)
+        public async Task<ApiResponse<string>> PayOrderAsync(string buyerId, Guid orderId, PayOrderDto request)
         {
             var order = await _repository.Order.GetByIdAsync(orderId);
             if (order is null) return ApiResponse<string>.Fail("Order not found.", 404);

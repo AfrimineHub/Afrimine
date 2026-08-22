@@ -437,5 +437,25 @@ namespace Afrimine.Services.DTOs
             [Required]
             public string Code { get; set; } = string.Empty;
         }
+
+        public class AdminMilestoneItemDto
+        {
+            public string BookingId { get; set; } = string.Empty;
+            public int MilestoneNumber { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public decimal Amount { get; set; }
+            public string Status { get; set; } = string.Empty;
+            public string? ReleasedAt { get; set; }
+            public string? MinerName { get; set; }
+            public string? SupplierName { get; set; }
+            public string? BookingStatus { get; set; }
+        }
+
+        public class AdminMilestoneQueryDto
+        {
+            public string? Status { get; set; }   // Locked / Pending / Released
+            public int Page { get; set; } = 1;
+            public int PageSize { get; set; } = 10;
+        }
     }
 }

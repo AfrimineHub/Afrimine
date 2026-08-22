@@ -198,5 +198,35 @@ namespace Afrimine.Repository
 
         public void DeleteAsset(Asset asset) =>
             _context.Set<Asset>().Remove(asset);
+
+        public async Task<(IEnumerable<Booking> Items, int TotalCount)> GetAllBookingsAdminAsync(string? q, BookingStatus? status, int page, int pageSize)
+        {
+            IQueryable<Booking> query = _context.Set<Booking>()
+                .Include(x => x.Asset)
+                .Include(x => x.Miner)
+                .Include(x => x.Supplier)
+                .Where(x => !x.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(x => x.Miner.FullName.Contains(q)
+                    || x.Supplier.CompanyName!.Contains(q)
+                    || x.Asset.Brand.Contains(q));
+
+            if (status.HasValue)
+                query = query.Where(x => x.Status == status.Value);
+
+            var total = await query.CountAsync();
+            var items = await query.OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (items, total);
+        }
+
+        public async Task<Booking?> GetBookingByIdAdminAsync(Guid bookingId) =>
+            await _context.Set<Booking>()
+                .Include(x => x.Asset)
+                .Include(x => x.Miner)
+                .Include(x => x.Supplier)
+                .Include(x => x.Disputes)
+                .FirstOrDefaultAsync(x => x.Id == bookingId && !x.IsDeleted);
     }
 }
