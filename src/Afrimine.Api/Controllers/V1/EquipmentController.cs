@@ -499,8 +499,7 @@ namespace Afrimine.Api.Controllers.V1
         /// </remarks>
         [Authorize(Roles = Roles.Vendor)]
         [HttpGet("operators")]
-        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
-        //[ProducesResponseType(typeof(ApiResponse<OperatorResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<OperatorResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
