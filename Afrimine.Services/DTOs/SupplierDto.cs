@@ -28,14 +28,10 @@ namespace Afrimine.Services.DTOs
             public string? CompanyName { get; set; }
             public string? BusinessPhone { get; set; }
             public string? BusinessEmail { get; set; }
-            [Required]
-            public string BankName { get; set; } = string.Empty;
-            [Required]
-            public string? BankCode { get; set; } = string.Empty;
-            [Required]
-            public string BankAccountNumber { get; set; } = string.Empty;
-            [Required]
-            public string BankAccountName { get; set; } = string.Empty;
+            public string? BankName { get; set; }
+            public string? BankCode { get; set; }
+            public string? BankAccountNumber { get; set; }
+            public string? BankAccountName { get; set; }
         }
 
         public class SupplierLocationDto
