@@ -18,5 +18,8 @@
         internal static readonly string UserNotFound = "No user found";
         internal static readonly string PasswordResetFailed = "Password reset failed";
         internal static readonly string NotAuthenticated = "User not authenticated";
+        internal static readonly string InvalidGoogleToken = "Invalid or expired Google token.";
+        internal static readonly string GoogleEmailNotVerified = "Your Google account's email is not verified.";
+        internal static readonly string GoogleLoginFailed = "Could not sign in with Google. Please try again later.";
     }
 }

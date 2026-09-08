@@ -87,6 +87,36 @@ namespace Afrimine.Api.Controllers.V1
             var response = await _service.User.ConfirmEmail(request);
             return StatusCode(response.StatusCode, response);
         }
+
+        /// <summary>Sign in (or sign up) with a Google account</summary>
+        /// <remarks>
+        /// The frontend obtains a Google ID token via Google Sign-In / Google Identity Services,
+        /// then sends it here. The API verifies the token with Google, then:
+        /// - Logs the user in if an account with that email already exists (linking the Google login to it), or
+        /// - Creates a brand-new, already-verified account using the Google profile (name, email, avatar).
+        ///
+        /// Behaves like `POST /auth/login` otherwise: returns a JWT access token and sets the
+        /// `HttpOnly` refresh token cookie.
+        ///
+        /// **`type`** (optional, defaults to `2` = Buyer) is only used when creating a brand new account:
+        /// - `1` = Vendor, `2` = Buyer, `3` = Investor
+        /// </remarks>
+        [AllowAnonymous]
+        [HttpPost("google-login")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDto request)
+        {
+            var response = await _service.User.GoogleLoginAsync(request);
+
+            if (!response.Success)
+                return StatusCode(response.StatusCode, response);
+
+            SetRefreshTokenCookie(response.RefreshToken!);
+
+            return StatusCode(response.StatusCode, response);
+        }
+
+
         /// <summary>Set a new password using the reset OTP</summary>
         /// <remarks>
         /// Complete the password reset flow using the OTP received via email.

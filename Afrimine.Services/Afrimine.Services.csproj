@@ -17,6 +17,7 @@
     <ProjectReference Include="..\Afrimine.Model\Afrimine.Model.csproj" />
     <ProjectReference Include="..\Afrimine.Repository\Afrimine.Repository.csproj" />
     <ProjectReference Include="..\src\Afrimine.Shared\Afrimine.Shared.csproj" />
+	  <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
   </ItemGroup>
 
 </Project>
