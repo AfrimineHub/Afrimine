@@ -71,7 +71,7 @@ namespace Afrimine.Services.BL.Implementation
                     Description = $"{d.RaisedBy?.FullName ?? "User"} raised a dispute: {d.Reason[..Math.Min(60, d.Reason.Length)]}",
                     Time = TimeAgo(d.CreatedAt),
                     ActionText = "Review",
-                    ActionUrl = $"/admin/dispute/{d.Id}"
+                    ActionUrl = $"api/v1/admin/dispute/{d.Id}"
                 });
             }
             foreach (var k in recentKyc)
@@ -84,7 +84,7 @@ namespace Afrimine.Services.BL.Implementation
                     Description = $"{k.User?.FullName ?? "Vendor"} submitted KYC documents",
                     Time = TimeAgo(k.CreatedAt),
                     ActionText = "Review",
-                    ActionUrl = $"/admin/kyc/review/{k.Id}"
+                    ActionUrl = $"api/v1/admin/kyc/review/{k.Id}"
                 });
             }
 
@@ -532,8 +532,7 @@ namespace Afrimine.Services.BL.Implementation
         }
 
         // ── Withdrawals ───────────────────────────────────────────────────────
-        public async Task<ApiResponse<PagedResultDto<AdminWithdrawalItemDto>>> GetWithdrawalsAsync(
-            AdminWithdrawalQueryDto query)
+        public async Task<ApiResponse<PagedResultDto<AdminWithdrawalItemDto>>> GetWithdrawalsAsync(AdminWithdrawalQueryDto query)
         {
             var (items, total) = await _admin.GetWithdrawalsAsync(query.Q, query.Status, query.Page, query.PageSize);
 
@@ -759,7 +758,7 @@ namespace Afrimine.Services.BL.Implementation
                 FullName = request.FullName,
                 UserName = request.Email,
                 Email = request.Email,
-                PhoneNumber = "",
+                PhoneNumber = "08069829923",
                 EmailConfirmed = true,
                 Type = RoleType.SuperAdmin,
                 Status = AccountStatus.Active
