@@ -21,5 +21,6 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<string>> UploadKycAsync(string userId, KycUploadDto request);
         Task<ApiResponse<string>> ChangePasswordAsync(string userId, ChangePasswordDto request);
         Task<ApiResponse<string>> UploadProfilePhotoAsync(string userId, ProfilePhotoUploadDto request);
+        Task<ApiResponse<LoginResponseDto>> GoogleLoginAsync(GoogleLoginRequestDto request);
     }
 }

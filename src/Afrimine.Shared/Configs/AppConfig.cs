@@ -14,6 +14,7 @@
         public string PayscrowBaseUrl { get; set; } = "https://api.payscrow.dev";
         public string PayscrowReturnUrl { get; set; } = string.Empty;
         public string PayscrowWebhookUrl { get; set; } = string.Empty;
+        public string GoogleClientId { get; set; } = string.Empty;
     }
 
     public class CloudinaryConfig
