@@ -71,7 +71,7 @@ namespace Afrimine.Services.BL.Implementation
                     Description = $"{d.RaisedBy?.FullName ?? "User"} raised a dispute: {d.Reason[..Math.Min(60, d.Reason.Length)]}",
                     Time = TimeAgo(d.CreatedAt),
                     ActionText = "Review",
-                    ActionUrl = $"api/v1/admin/dispute/{d.Id}"
+                    ActionUrl = $"/admin/disputes/{d.Id}"
                 });
             }
             foreach (var k in recentKyc)
@@ -84,7 +84,7 @@ namespace Afrimine.Services.BL.Implementation
                     Description = $"{k.User?.FullName ?? "Vendor"} submitted KYC documents",
                     Time = TimeAgo(k.CreatedAt),
                     ActionText = "Review",
-                    ActionUrl = $"api/v1/admin/kyc/review/{k.Id}"
+                    ActionUrl = $"/admin/kyc/review/{k.Id}"
                 });
             }
 
@@ -758,7 +758,7 @@ namespace Afrimine.Services.BL.Implementation
                 FullName = request.FullName,
                 UserName = request.Email,
                 Email = request.Email,
-                PhoneNumber = "08069829923",
+                PhoneNumber = "08061982923",
                 EmailConfirmed = true,
                 Type = RoleType.SuperAdmin,
                 Status = AccountStatus.Active
