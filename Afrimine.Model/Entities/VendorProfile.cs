@@ -1,0 +1,30 @@
+﻿using Afrimine.Model.Enums;
+
+namespace Afrimine.Model.Entities
+{
+    public class VendorProfile : BaseEntity
+    {
+        public string UserId { get; set; } = string.Empty;
+        public User User { get; set; } = null!;
+        public BusinessType BusinessType { get; set; }
+        public string Country { get; set; } = string.Empty;
+        public string StateOrRegion { get; set; } = string.Empty;
+        public string OfficeAddress { get; set; } = string.Empty;
+        public string? Website { get; set; }
+        public DocumentType? DocumentType { get; set; }
+        public string? DocumentUrl { get; set; }
+        public string? DocumentFileName { get; set; }
+        public VendorType VendorType { get; set; } = VendorType.EquipmentSupplier;
+        public int OnboardingStep { get; set; } = 1;
+        public string? DocumentPublicId { get; set; }
+        public string? DocumentIdNumber { get; set; }
+        public string? DateOfBirth { get; set; }
+        public string? ProfilePhotoUrl { get; set; }
+        public long? DocumentFileSizeBytes { get; set; }
+        public KycStatus KycStatus { get; set; } = KycStatus.NotStarted;
+        public string? KycRejectionReason { get; set; }
+        public string? BankName { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public bool IsComplete { get; set; } = false;
+    }
+}
