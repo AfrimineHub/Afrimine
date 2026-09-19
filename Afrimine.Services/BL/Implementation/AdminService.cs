@@ -50,8 +50,12 @@ namespace Afrimine.Services.BL.Implementation
 
             var stats = new List<AdminStatItemDto>
             {
-                new() { Id = "total_users", Title = "Total Users", Value = totalUsers, IsNeutral = true },
-                new() { Id = "active_users", Title = "Active Users", Value = activeUsers, IsPositive = true },
+                new() {
+                    Id = "total_users", Title = "Total Users",
+                    Value = totalUsers, IsNeutral = true 
+                },
+                new() { Id = "active_users", Title = "Active Users",
+                    Value = activeUsers, IsPositive = true },
                 new() { Id = "kyc_verified", Title = "KYC Verified", Value = kycVerified, IsPositive = true },
                 new() { Id = "vendors", Title = "Total Vendors", Value = vendors, IsNeutral = true },
                 new() { Id = "total_revenue", Title = "Total Revenue", Value = totalRevenue, IsPositive = true },
@@ -802,6 +806,7 @@ namespace Afrimine.Services.BL.Implementation
             {
                 var profile = new SupplierProfile
                 {
+                    Id = Guid.Parse(user.Id),
                     UserId = user.Id,
                     VendorType = request.VendorType ?? VendorType.MineralSupplier,
                     KycStatus = KycStatus.NotStarted,
