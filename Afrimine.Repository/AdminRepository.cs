@@ -120,8 +120,11 @@ namespace Afrimine.Repository
 
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(x => x.Buyer.FullName.Contains(q)
+                    || x.Buyer.Email!.Contains(q)
                     || x.Vendor.FullName.Contains(q)
-                    || x.Listing.Title.Contains(q));
+                    || x.Vendor.Email!.Contains(q)
+                    || x.Listing.Title.Contains(q)
+                    || x.Id.ToString().Contains(q));
 
             if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<OrderStatus>(status, true, out var statusEnum))
                 query = query.Where(x => x.Status == statusEnum);
@@ -139,16 +142,36 @@ namespace Afrimine.Repository
                 .Include(x => x.Listing)
                 .FirstOrDefaultAsync(x => x.Id == orderId && !x.IsDeleted);
 
-        public async Task<int> CountOrdersByStatusAsync(OrderStatus status) =>
-            await _context.Set<Order>().CountAsync(x => x.Status == status && !x.IsDeleted);
+        public async Task<int> CountOrdersByStatusAsync(OrderStatus status) => 
+            await CountOrdersByStatusAsync(status, null);
+
+        public async Task<int> CountOrdersByStatusAsync(OrderStatus status, string? q)
+        {
+            IQueryable<Order> query = _context.Set<Order>()
+                .Include(x => x.Buyer).Include(x => x.Vendor).Include(x => x.Listing)
+                .Where(x => x.Status == status && !x.IsDeleted);
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(x => x.Buyer.FullName.Contains(q)
+                    || x.Buyer.Email!.Contains(q)
+                    || x.Vendor.FullName.Contains(q)
+                    || x.Vendor.Email!.Contains(q)
+                    || x.Listing.Title.Contains(q)
+                    || x.Id.ToString().Contains(q));
+            return await query.CountAsync();
+        }
 
         public async Task<int> CountAllOrdersAsync(string? q)
         {
             IQueryable<Order> query = _context.Set<Order>()
-                .Include(x => x.Buyer).Include(x => x.Vendor)
+                .Include(x => x.Buyer).Include(x => x.Vendor).Include(x => x.Listing)
                 .Where(x => !x.IsDeleted);
             if (!string.IsNullOrWhiteSpace(q))
-                query = query.Where(x => x.Buyer.FullName.Contains(q) || x.Vendor.FullName.Contains(q));
+                query = query.Where(x => x.Buyer.FullName.Contains(q)
+                    || x.Buyer.Email!.Contains(q)
+                    || x.Vendor.FullName.Contains(q)
+                    || x.Vendor.Email!.Contains(q)
+                    || x.Listing.Title.Contains(q)
+                    || x.Id.ToString().Contains(q));
             return await query.CountAsync();
         }
 
