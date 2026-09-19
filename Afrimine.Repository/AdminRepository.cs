@@ -109,7 +109,26 @@ namespace Afrimine.Repository
             return (items, total);
         }
 
+
         // ── Orders ─────────────────────────────────────────────────────────────
+
+        private static IQueryable<Order> ApplyOrderSearch(IQueryable<Order> query, string? q)
+        {
+            if (string.IsNullOrWhiteSpace(q))
+                return query;
+
+            var numericOnly = new string(q.Where(c => char.IsDigit(c) || c == '.').ToArray());
+            var hasAmountMatch = decimal.TryParse(numericOnly, out var amountValue) && numericOnly.Length > 0;
+
+            return query.Where(x => x.Buyer.FullName.Contains(q)
+                || x.Buyer.Email!.Contains(q)
+                || x.Vendor.FullName.Contains(q)
+                || x.Vendor.Email!.Contains(q)
+                || x.Listing.Title.Contains(q)
+                || x.Id.ToString().Contains(q)
+                || (hasAmountMatch && x.Amount == amountValue));
+        }
+
         public async Task<(IEnumerable<Order> Items, int TotalCount)> GetOrdersAsync(string? q, string? status, int page, int pageSize)
         {
             IQueryable<Order> query = _context.Set<Order>()
@@ -118,13 +137,7 @@ namespace Afrimine.Repository
                 .Include(x => x.Listing)
                 .Where(x => !x.IsDeleted);
 
-            if (!string.IsNullOrWhiteSpace(q))
-                query = query.Where(x => x.Buyer.FullName.Contains(q)
-                    || x.Buyer.Email!.Contains(q)
-                    || x.Vendor.FullName.Contains(q)
-                    || x.Vendor.Email!.Contains(q)
-                    || x.Listing.Title.Contains(q)
-                    || x.Id.ToString().Contains(q));
+            query = ApplyOrderSearch(query, q);
 
             if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<OrderStatus>(status, true, out var statusEnum))
                 query = query.Where(x => x.Status == statusEnum);
@@ -142,7 +155,7 @@ namespace Afrimine.Repository
                 .Include(x => x.Listing)
                 .FirstOrDefaultAsync(x => x.Id == orderId && !x.IsDeleted);
 
-        public async Task<int> CountOrdersByStatusAsync(OrderStatus status) => 
+        public async Task<int> CountOrdersByStatusAsync(OrderStatus status) =>
             await CountOrdersByStatusAsync(status, null);
 
         public async Task<int> CountOrdersByStatusAsync(OrderStatus status, string? q)
@@ -150,13 +163,7 @@ namespace Afrimine.Repository
             IQueryable<Order> query = _context.Set<Order>()
                 .Include(x => x.Buyer).Include(x => x.Vendor).Include(x => x.Listing)
                 .Where(x => x.Status == status && !x.IsDeleted);
-            if (!string.IsNullOrWhiteSpace(q))
-                query = query.Where(x => x.Buyer.FullName.Contains(q)
-                    || x.Buyer.Email!.Contains(q)
-                    || x.Vendor.FullName.Contains(q)
-                    || x.Vendor.Email!.Contains(q)
-                    || x.Listing.Title.Contains(q)
-                    || x.Id.ToString().Contains(q));
+            query = ApplyOrderSearch(query, q);
             return await query.CountAsync();
         }
 
@@ -165,13 +172,7 @@ namespace Afrimine.Repository
             IQueryable<Order> query = _context.Set<Order>()
                 .Include(x => x.Buyer).Include(x => x.Vendor).Include(x => x.Listing)
                 .Where(x => !x.IsDeleted);
-            if (!string.IsNullOrWhiteSpace(q))
-                query = query.Where(x => x.Buyer.FullName.Contains(q)
-                    || x.Buyer.Email!.Contains(q)
-                    || x.Vendor.FullName.Contains(q)
-                    || x.Vendor.Email!.Contains(q)
-                    || x.Listing.Title.Contains(q)
-                    || x.Id.ToString().Contains(q));
+            query = ApplyOrderSearch(query, q);
             return await query.CountAsync();
         }
 
