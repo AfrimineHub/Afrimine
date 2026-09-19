@@ -233,6 +233,8 @@ namespace Afrimine.Repository
             {
                 var numericOnly = new string(q.Where(c => char.IsDigit(c) || c == '.').ToArray());
                 var hasAmountMatch = decimal.TryParse(numericOnly, out var amountValue) && numericOnly.Length > 0;
+                DateTime? parsedDate = DateTime.TryParse(q, System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None, out var dt) ? dt : null;
+                var statusMatch = Enum.TryParse<BookingStatus>(q, true, out var parsedStatus);
 
                 query = query.Where(x => x.Miner.FullName.Contains(q)
                     || x.Miner.Email!.Contains(q)
@@ -240,7 +242,9 @@ namespace Afrimine.Repository
                     || x.Supplier.BusinessEmail!.Contains(q)
                     || x.Asset.Brand.Contains(q)
                     || x.Id.ToString().Contains(q)
-                    || (hasAmountMatch && x.TotalAmount == amountValue));
+                    || (hasAmountMatch && x.TotalAmount == amountValue)
+                    || (parsedDate.HasValue && x.CreatedAt.Date == parsedDate.Value.Date)
+                    || (statusMatch && x.Status == parsedStatus));
             }
 
             if (status.HasValue)
