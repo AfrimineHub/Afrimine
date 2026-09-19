@@ -468,13 +468,28 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<AdminOrderSummaryDto>> GetOrderSummaryAsync(string? q)
         {
+            var orderTotal = await _admin.CountAllOrdersAsync(q);
+            var orderCompleted = await _admin.CountOrdersByStatusAsync(OrderStatus.Completed, q);
+            var orderInProgress = await _admin.CountOrdersByStatusAsync(OrderStatus.Ongoing, q);
+            var orderPending = await _admin.CountOrdersByStatusAsync(OrderStatus.Pending, q);
+            var orderFailedOrCancelled = await _admin.CountOrdersByStatusAsync(OrderStatus.Cancelled, q);
+
+            // Bookings are the other half of the merged "orders" feed (see GetOrdersAsync) —
+            // pull matching bookings once and bucket BookingStatus onto the same 4 groups.
+            var (bookings, bookingTotal) = await _equipment.GetAllBookingsAdminAsync(q, null, 1, int.MaxValue);
+            var bookingCompleted = bookings.Count(b => b.Status == BookingStatus.Completed);
+            var bookingInProgress = bookings.Count(b => b.Status == BookingStatus.Active);
+            var bookingPending = bookings.Count(b => b.Status == BookingStatus.Pending || b.Status == BookingStatus.Approved);
+            var bookingFailedOrCancelled = bookings.Count(b => b.Status == BookingStatus.Declined
+                || b.Status == BookingStatus.Disputed || b.Status == BookingStatus.Cancelled);
+
             return ApiResponse<AdminOrderSummaryDto>.Ok(new AdminOrderSummaryDto
             {
-                Total = await _admin.CountAllOrdersAsync(q),
-                Completed = await _admin.CountOrdersByStatusAsync(OrderStatus.Completed, q),
-                InProgress = await _admin.CountOrdersByStatusAsync(OrderStatus.Ongoing, q),
-                Pending = await _admin.CountOrdersByStatusAsync(OrderStatus.Pending, q),
-                FailedOrCancelled = await _admin.CountOrdersByStatusAsync(OrderStatus.Cancelled, q)
+                Total = orderTotal + bookingTotal,
+                Completed = orderCompleted + bookingCompleted,
+                InProgress = orderInProgress + bookingInProgress,
+                Pending = orderPending + bookingPending,
+                FailedOrCancelled = orderFailedOrCancelled + bookingFailedOrCancelled
             });
         }
 
