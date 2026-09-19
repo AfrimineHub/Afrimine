@@ -48,5 +48,6 @@ namespace Afrimine.Repository
         Task<(IEnumerable<Escrow> Items, int TotalCount)> GetEscrowPaymentsAsync(string? status, int page, int pageSize);
         Task<bool> HardDeleteUserCascadeAsync(string userId);
         Task<int> CountAssetsByStatusAsync(AssetStatus? status);
+        Task<int> CountOrdersByStatusAsync(OrderStatus status, string? q);
     }
 }

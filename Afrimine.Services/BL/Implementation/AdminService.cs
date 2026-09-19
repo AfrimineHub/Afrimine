@@ -465,15 +465,16 @@ namespace Afrimine.Services.BL.Implementation
             });
         }
 
+
         public async Task<ApiResponse<AdminOrderSummaryDto>> GetOrderSummaryAsync(string? q)
         {
             return ApiResponse<AdminOrderSummaryDto>.Ok(new AdminOrderSummaryDto
             {
                 Total = await _admin.CountAllOrdersAsync(q),
-                Completed = await _admin.CountOrdersByStatusAsync(OrderStatus.Completed),
-                InProgress = await _admin.CountOrdersByStatusAsync(OrderStatus.Ongoing),
-                Pending = await _admin.CountOrdersByStatusAsync(OrderStatus.Pending),
-                FailedOrCancelled = await _admin.CountOrdersByStatusAsync(OrderStatus.Cancelled)
+                Completed = await _admin.CountOrdersByStatusAsync(OrderStatus.Completed, q),
+                InProgress = await _admin.CountOrdersByStatusAsync(OrderStatus.Ongoing, q),
+                Pending = await _admin.CountOrdersByStatusAsync(OrderStatus.Pending, q),
+                FailedOrCancelled = await _admin.CountOrdersByStatusAsync(OrderStatus.Cancelled, q)
             });
         }
 
