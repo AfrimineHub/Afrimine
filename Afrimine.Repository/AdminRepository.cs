@@ -120,13 +120,22 @@ namespace Afrimine.Repository
             var numericOnly = new string(q.Where(c => char.IsDigit(c) || c == '.').ToArray());
             var hasAmountMatch = decimal.TryParse(numericOnly, out var amountValue) && numericOnly.Length > 0;
 
+            DateTime? parsedDate = DateTime.TryParse(q, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var dt)
+                ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+                : null;
+
+            var statusMatch = Enum.TryParse<OrderStatus>(q, true, out var parsedStatus);
+
             return query.Where(x => x.Buyer.FullName.Contains(q)
                 || x.Buyer.Email!.Contains(q)
                 || x.Vendor.FullName.Contains(q)
                 || x.Vendor.Email!.Contains(q)
                 || x.Listing.Title.Contains(q)
                 || x.Id.ToString().Contains(q)
-                || (hasAmountMatch && x.Amount == amountValue));
+                || (hasAmountMatch && x.Amount == amountValue)
+                || (parsedDate.HasValue && x.CreatedAt.Date == parsedDate.Value.Date)
+                || (statusMatch && x.Status == parsedStatus));
         }
 
         public async Task<(IEnumerable<Order> Items, int TotalCount)> GetOrdersAsync(string? q, string? status, int page, int pageSize)
