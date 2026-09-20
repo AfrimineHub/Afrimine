@@ -509,42 +509,71 @@ namespace Afrimine.Services.BL.Implementation
         // ── Revenue ───────────────────────────────────────────────────────────
         public async Task<ApiResponse<AdminRevenueSummaryDto>> GetRevenueSummaryAsync()
         {
-            var total = await _admin.GetTotalRevenueAsync();
+            var orderRevenue = await _admin.GetTotalRevenueAsync();
             var lastMonth = await _admin.GetTotalRevenueLastMonthAsync();
             var payouts = await _admin.GetVendorPayoutsAsync();
             var payoutsLastMonth = await _admin.GetVendorPayoutsLastMonthAsync();
-            var pending = await _admin.GetPendingPaymentsAsync();
+            var orderPending = await _admin.GetPendingPaymentsAsync();
+
+            // Order/Escrow/Revenue tables are currently unused — Booking/WalletTransaction/
+            // SupplierWallet carry the real numbers, same split as GetOrderSummaryAsync.
+            var bookingRevenue = await _equipment.SumBookingRevenueAsync();
+            var bookingPending = await _equipment.SumSupplierWalletPendingBalanceAsync();
+
+            var totalRevenue = orderRevenue + bookingRevenue;
+            var pendingPayments = orderPending + bookingPending;
 
             return ApiResponse<AdminRevenueSummaryDto>.Ok(new AdminRevenueSummaryDto
             {
-                TotalPlatformRevenue = total,
+                TotalPlatformRevenue = totalRevenue,
                 TotalPlatformRevenueChangePercent = lastMonth > 0
-                    ? Math.Round((double)((total - lastMonth) / lastMonth) * 100, 1) : null,
+                    ? Math.Round((double)((totalRevenue - lastMonth) / lastMonth) * 100, 1) : null,
                 VendorPayouts = payouts,
                 VendorPayoutsChangePercent = payoutsLastMonth > 0
                     ? Math.Round((double)((payouts - payoutsLastMonth) / payoutsLastMonth) * 100, 1) : null,
-                PendingPayments = pending,
+                PendingPayments = pendingPayments,
                 PendingPaymentsChangePercent = null,
-                Currency = "USD"
+                Currency = "NGN"
             });
         }
 
-        public async Task<ApiResponse<PagedResultDto<AdminTransactionItemDto>>> GetTransactionsAsync(
-            AdminTransactionQueryDto query)
+        public async Task<ApiResponse<PagedResultDto<AdminTransactionItemDto>>> GetTransactionsAsync(AdminTransactionQueryDto query)
         {
-            var (items, total) = await _admin.GetTransactionsAsync(query.Status, query.Page, query.PageSize);
+            var (revenueItems, _) = await _admin.GetTransactionsAsync(query.Status, 1, int.MaxValue);
+            var (walletItems, _) = await _equipment.GetWalletTransactionsAdminAsync(1, int.MaxValue);
+
+            var mappedRevenue = revenueItems.Select(r => new AdminTransactionItemDto
+            {
+                Id = r.Id.ToString(),
+                VendorName = r.Vendor?.FullName,
+                ProductName = r.Listing?.Title,
+                Amount = r.Amount,
+                Currency = r.Currency,
+                Status = "completed",
+                CreatedAt = r.CreatedAt.ToString("O")
+            });
+
+            var mappedWallet = walletItems.Select(t => new AdminTransactionItemDto
+            {
+                Id = t.Id.ToString(),
+                VendorName = t.Booking?.Supplier?.CompanyName ?? t.Wallet?.Supplier?.CompanyName,
+                ProductName = t.Booking?.Asset?.Brand,
+                Amount = t.Amount,
+                Currency = t.Currency,
+                Status = "completed",
+                CreatedAt = t.CreatedAt.ToString("O")
+            });
+
+            var merged = mappedRevenue.Concat(mappedWallet)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+
+            var total = merged.Count;
+            var page = merged.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToList();
+
             return ApiResponse<PagedResultDto<AdminTransactionItemDto>>.Ok(new PagedResultDto<AdminTransactionItemDto>
             {
-                Items = items.Select(r => new AdminTransactionItemDto
-                {
-                    Id = r.Id.ToString(),
-                    VendorName = r.Vendor?.FullName,
-                    ProductName = r.Listing?.Title,
-                    Amount = r.Amount,
-                    Currency = r.Currency,
-                    Status = "completed",
-                    CreatedAt = r.CreatedAt.ToString("O")
-                }),
+                Items = page,
                 TotalCount = total,
                 Page = query.Page,
                 PageSize = query.PageSize
