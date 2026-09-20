@@ -9,5 +9,8 @@
         public string Description { get; set; } = string.Empty;
         public string? Reference { get; set; }
         public string Currency { get; set; } = "NGN";
+        public Guid? BookingId { get; set; }
+        public Booking? Booking { get; set; }
+
     }
 }

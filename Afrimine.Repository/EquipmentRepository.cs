@@ -285,6 +285,43 @@ namespace Afrimine.Repository
                 .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return (items, total);
         }
+
+        public async Task<decimal> SumBookingRevenueAsync()
+        {
+            // Only count TotalAmount for bookings where a real payment credit actually
+            // happened (escrow-locked or milestone-released) — Pending/Declined bookings
+            // never had money move, so they shouldn't count as "revenue".
+            var paidBookingIds = await _context.Set<WalletTransaction>()
+                .Where(t => t.BookingId != null && t.Type == "credit" && !t.IsDeleted)
+                .Select(t => t.BookingId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            return await _context.Set<Booking>()
+                .Where(b => paidBookingIds.Contains(b.Id))
+                .SumAsync(b => b.TotalAmount);
+        }
+
+        public async Task<decimal> SumWalletTransactionCreditsAsync() =>
+            await _context.Set<WalletTransaction>()
+                .Where(x => x.Type == "credit" && !x.IsDeleted)
+                .SumAsync(x => x.Amount);
+
+        public async Task<decimal> SumSupplierWalletPendingBalanceAsync() =>
+            await _context.Set<SupplierWallet>().SumAsync(x => x.PendingBalance);
+
+        public async Task<(IEnumerable<WalletTransaction> Items, int TotalCount)> GetWalletTransactionsAdminAsync(int page, int pageSize)
+        {
+            IQueryable<WalletTransaction> query = _context.Set<WalletTransaction>()
+                .Include(x => x.Wallet).ThenInclude(w => w.Supplier)
+                .Include(x => x.Booking).ThenInclude(b => b!.Asset)
+                .Where(x => x.Type == "credit" && !x.IsDeleted);
+
+            var total = await query.CountAsync();
+            var items = await query.OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (items, total);
+        }
     }
 }
     
