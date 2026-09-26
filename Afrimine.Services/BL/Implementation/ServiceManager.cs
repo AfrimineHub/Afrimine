@@ -38,7 +38,7 @@ namespace Afrimine.Services.BL.Implementation
             _marketService = new Lazy<IMarketService>(() => new MarketService(repositoryManager));
             _messagingService = new Lazy<IMessagingService>(() => new MessagingService(repositoryManager));
             _subscriptionService = new Lazy<ISubscriptionService>(() => new SubscriptionService(repositoryManager));
-            _escrowService = new Lazy<IEscrowService>(() => new EscrowService(repositoryManager));
+            _escrowService = new Lazy<IEscrowService>(() => new EscrowService(repositoryManager, equipmentRepository));
             _cloudinary = cloudinary;
             _adminService = new Lazy<IAdminService>(() => new AdminService(repositoryManager,adminRepository, userManager, equipmentRepository));
             _equipmentService = new Lazy<IEquipmentService>(() => new EquipmentService(repositoryManager, equipmentRepository, payscrowService, cloudinary, userManager, options));

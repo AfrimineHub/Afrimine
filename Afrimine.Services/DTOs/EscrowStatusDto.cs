@@ -32,6 +32,8 @@ namespace Afrimine.Services.DTOs
         public string? AdminNote { get; set; }
         public DateTime? ResolvedAt { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string Source { get; set; } = "Order";
+        public Guid? BookingId { get; set; }
     }
 
     public class ResolveDisputeDto

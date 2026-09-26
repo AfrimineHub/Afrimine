@@ -322,6 +322,29 @@ namespace Afrimine.Repository
                 .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return (items, total);
         }
+
+        public async Task<(IEnumerable<BookingDispute> Items, int TotalCount)> GetAllBookingDisputesAdminAsync(int page, int pageSize, DisputeStatus? status)
+        {
+            IQueryable<BookingDispute> query = _context.Set<BookingDispute>()
+                .Include(x => x.Booking).ThenInclude(b => b.Asset)
+                .Include(x => x.RaisedBy);
+
+            if (status.HasValue)
+                query = query.Where(x => x.Status == status.Value);
+
+            var total = await query.CountAsync();
+            var items = await query.OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (items, total);
+        }
+
+        public async Task<BookingDispute?> GetBookingDisputeByIdAdminAsync(Guid disputeId) => await _context.Set<BookingDispute>()
+                .Include(x => x.Booking).ThenInclude(b => b.Asset)
+                .Include(x => x.RaisedBy)
+                .FirstOrDefaultAsync(x => x.Id == disputeId);
+
+        public async Task<int> CountOpenBookingDisputesAsync() =>
+            await _context.Set<BookingDispute>().CountAsync(x => x.Status == DisputeStatus.Open);
     }
 }
     
