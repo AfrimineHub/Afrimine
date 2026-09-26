@@ -24,7 +24,7 @@ namespace Afrimine.Services.DTOs
     public class DisputeDto
     {
         public Guid Id { get; set; }
-        public Guid OrderId { get; set; }
+        public Guid? OrderId { get; set; }
         public string ListingTitle { get; set; } = string.Empty;
         public string RaisedByName { get; set; } = string.Empty;
         public string Reason { get; set; } = string.Empty;
