@@ -93,7 +93,7 @@ namespace Afrimine.Services.BL.Implementation
                     Description = $"{d.RaisedBy?.FullName ?? "User"} raised a dispute: {d.Description[..Math.Min(60, d.Description.Length)]}",
                     Time = TimeAgo(d.CreatedAt),
                     ActionText = "Review",
-                    ActionUrl = $"/admin/booking-dispute/{d.Id}"
+                    ActionUrl = $"/admin/dispute/{d.Id}"
                 });
             }
             foreach (var k in recentKyc)
