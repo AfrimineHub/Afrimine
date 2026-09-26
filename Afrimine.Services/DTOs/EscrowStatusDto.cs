@@ -34,6 +34,8 @@ namespace Afrimine.Services.DTOs
         public DateTime CreatedAt { get; set; }
         public string Source { get; set; } = "Order";
         public Guid? BookingId { get; set; }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; } = "NGN";
     }
 
     public class ResolveDisputeDto

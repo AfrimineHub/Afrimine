@@ -257,7 +257,9 @@ namespace Afrimine.Services.BL.Implementation
                 Status = d.Status.ToString(),
                 AdminNote = d.AdminNote,
                 ResolvedAt = d.ResolvedAt,
-                CreatedAt = d.CreatedAt
+                CreatedAt = d.CreatedAt,
+                Amount = d.Order?.Amount ?? 0,
+                Currency = d.Order?.Currency ?? "NGN",
             });
 
             var mappedBooking = bookingDisputes.Select(d => new DisputeDto
@@ -271,7 +273,9 @@ namespace Afrimine.Services.BL.Implementation
                 Status = d.Status.ToString(),
                 AdminNote = d.Resolution,
                 ResolvedAt = null,
-                CreatedAt = d.CreatedAt
+                CreatedAt = d.CreatedAt,
+                Amount = d.Booking?.TotalAmount ?? 0,
+                Currency = d.Booking?.Currency ?? "NGN",
             });
 
             var merged = mappedOrder.Concat(mappedBooking)
@@ -306,7 +310,9 @@ namespace Afrimine.Services.BL.Implementation
                     Status = d.Status.ToString(),
                     AdminNote = d.AdminNote,
                     ResolvedAt = d.ResolvedAt,
-                    CreatedAt = d.CreatedAt
+                    CreatedAt = d.CreatedAt,
+                    Amount = d.Order?.Amount ?? 0,
+                    Currency = d.Order?.Currency ?? "NGN"
                 });
 
             var bd = await _equipment.GetBookingDisputeByIdAdminAsync(disputeId);
@@ -322,7 +328,9 @@ namespace Afrimine.Services.BL.Implementation
                     Status = bd.Status.ToString(),
                     AdminNote = bd.Resolution,
                     ResolvedAt = null,
-                    CreatedAt = bd.CreatedAt
+                    CreatedAt = bd.CreatedAt,
+                    Amount = bd.Booking?.TotalAmount ?? 0,
+                    Currency = bd.Booking?.Currency ?? "NGN"
                 });
 
             return ApiResponse<DisputeDto>.Fail("Dispute not found.", 404);
