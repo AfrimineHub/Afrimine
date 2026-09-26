@@ -1,0 +1,51 @@
+name: Develop Branch CICD
+on:
+  pull_request:
+    branches: ["develop"]
+    types: [closed]
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: afrimine-api
+
+jobs:
+  build-and-push:
+    if: >
+      github.event.pull_request.merged == true && 
+      github.event.pull_request.base.ref == 'develop'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Login To Docker Hub
+        uses: docker/login-action@v3
+        with: 
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+          -f src/Afrimine.Api/Dockerfile \
+          -t ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ github.sha }} \
+          -t ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest \
+          .
+
+      - name: Push Docker Image 
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ github.sha }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+
+      - name: Automatic Deploy to Render
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
