@@ -10,10 +10,13 @@ namespace Afrimine.Services.BL.Implementation
     public class EscrowService : IEscrowService
     {
         private readonly IRepositoryManager _repository;
+        private readonly IEquipmentRepository _equipment;
 
-        public EscrowService(IRepositoryManager repository)
+
+        public EscrowService(IRepositoryManager repository, IEquipmentRepository equipment)
         {
             _repository = repository;
+            _equipment = equipment;
         }
 
         public async Task<ApiResponse<EscrowStatusDto>> GetEscrowStatusAsync(string userId, Guid orderId)
@@ -205,42 +208,48 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok("Quote accepted. Order created.");
         }
 
+        //public async Task<ApiResponse<PagedResultDto<DisputeDto>>> GetDisputesAsync(
+        //    int page, int pageSize, string? status)
+        //{
+        //    DisputeStatus? disputeStatus = null;
+        //    if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<DisputeStatus>(status, true, out var parsed))
+        //        disputeStatus = parsed;
+
+        //    var (items, total) = await _repository.Dispute.GetAllAsync(page, pageSize, disputeStatus);
+        //    return ApiResponse<PagedResultDto<DisputeDto>>.Ok(new PagedResultDto<DisputeDto>
+        //    {
+        //        Items = items.Select(d => new DisputeDto
+        //        {
+        //            Id = d.Id,
+        //            OrderId = d.OrderId,
+        //            ListingTitle = d.Order?.Listing?.Title ?? string.Empty,
+        //            RaisedByName = d.RaisedBy?.UserName ?? string.Empty,
+        //            Reason = d.Reason,
+        //            Status = d.Status.ToString(),
+        //            AdminNote = d.AdminNote,
+        //            ResolvedAt = d.ResolvedAt,
+        //            CreatedAt = d.CreatedAt
+        //        }),
+        //        TotalCount = total,
+        //        Page = page,
+        //        PageSize = pageSize
+        //    });
+        //}
+
         public async Task<ApiResponse<PagedResultDto<DisputeDto>>> GetDisputesAsync(
-            int page, int pageSize, string? status)
+    int page, int pageSize, string? status)
         {
             DisputeStatus? disputeStatus = null;
             if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<DisputeStatus>(status, true, out var parsed))
                 disputeStatus = parsed;
 
-            var (items, total) = await _repository.Dispute.GetAllAsync(page, pageSize, disputeStatus);
-            return ApiResponse<PagedResultDto<DisputeDto>>.Ok(new PagedResultDto<DisputeDto>
-            {
-                Items = items.Select(d => new DisputeDto
-                {
-                    Id = d.Id,
-                    OrderId = d.OrderId,
-                    ListingTitle = d.Order?.Listing?.Title ?? string.Empty,
-                    RaisedByName = d.RaisedBy?.UserName ?? string.Empty,
-                    Reason = d.Reason,
-                    Status = d.Status.ToString(),
-                    AdminNote = d.AdminNote,
-                    ResolvedAt = d.ResolvedAt,
-                    CreatedAt = d.CreatedAt
-                }),
-                TotalCount = total,
-                Page = page,
-                PageSize = pageSize
-            });
-        }
+            var (orderDisputes, _) = await _repository.Dispute.GetAllAsync(page, pageSize, disputeStatus);
+            var (bookingDisputes, _) = await _equipment.GetAllBookingDisputesAdminAsync(1, int.MaxValue, disputeStatus);
 
-        public async Task<ApiResponse<DisputeDto>> GetDisputeByIdAsync(Guid disputeId)
-        {
-            var d = await _repository.Dispute.GetByIdAsync(disputeId);
-            if (d is null) return ApiResponse<DisputeDto>.Fail("Dispute not found.", 404);
-
-            return ApiResponse<DisputeDto>.Ok(new DisputeDto
+            var mappedOrder = orderDisputes.Select(d => new DisputeDto
             {
                 Id = d.Id,
+                Source = "Order",
                 OrderId = d.OrderId,
                 ListingTitle = d.Order?.Listing?.Title ?? string.Empty,
                 RaisedByName = d.RaisedBy?.UserName ?? string.Empty,
@@ -250,6 +259,73 @@ namespace Afrimine.Services.BL.Implementation
                 ResolvedAt = d.ResolvedAt,
                 CreatedAt = d.CreatedAt
             });
+
+            var mappedBooking = bookingDisputes.Select(d => new DisputeDto
+            {
+                Id = d.Id,
+                Source = "Booking",
+                BookingId = d.BookingId,
+                ListingTitle = d.Booking?.Asset?.Brand ?? string.Empty,
+                RaisedByName = d.RaisedBy?.FullName ?? string.Empty,
+                Reason = d.Description,
+                Status = d.Status.ToString(),
+                AdminNote = d.Resolution,
+                ResolvedAt = null,
+                CreatedAt = d.CreatedAt
+            });
+
+            var merged = mappedOrder.Concat(mappedBooking)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+
+            var total = merged.Count;
+            var pageItems = merged.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            return ApiResponse<PagedResultDto<DisputeDto>>.Ok(new PagedResultDto<DisputeDto>
+            {
+                Items = pageItems,
+                TotalCount = total,
+                Page = page,
+                PageSize = pageSize
+            });
+        }
+
+
+        public async Task<ApiResponse<DisputeDto>> GetDisputeByIdAsync(Guid disputeId)
+        {
+            var d = await _repository.Dispute.GetByIdAsync(disputeId);
+            if (d is not null)
+                return ApiResponse<DisputeDto>.Ok(new DisputeDto
+                {
+                    Id = d.Id,
+                    Source = "Order",
+                    OrderId = d.OrderId,
+                    ListingTitle = d.Order?.Listing?.Title ?? string.Empty,
+                    RaisedByName = d.RaisedBy?.UserName ?? string.Empty,
+                    Reason = d.Reason,
+                    Status = d.Status.ToString(),
+                    AdminNote = d.AdminNote,
+                    ResolvedAt = d.ResolvedAt,
+                    CreatedAt = d.CreatedAt
+                });
+
+            var bd = await _equipment.GetBookingDisputeByIdAdminAsync(disputeId);
+            if (bd is not null)
+                return ApiResponse<DisputeDto>.Ok(new DisputeDto
+                {
+                    Id = bd.Id,
+                    Source = "Booking",
+                    BookingId = bd.BookingId,
+                    ListingTitle = bd.Booking?.Asset?.Brand ?? string.Empty,
+                    RaisedByName = bd.RaisedBy?.FullName ?? string.Empty,
+                    Reason = bd.Description,
+                    Status = bd.Status.ToString(),
+                    AdminNote = bd.Resolution,
+                    ResolvedAt = null,
+                    CreatedAt = bd.CreatedAt
+                });
+
+            return ApiResponse<DisputeDto>.Fail("Dispute not found.", 404);
         }
 
         public async Task<ApiResponse<string>> ResolveDisputeAsync(

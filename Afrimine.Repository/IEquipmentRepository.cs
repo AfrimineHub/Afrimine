@@ -60,5 +60,8 @@ namespace Afrimine.Repository
         Task<decimal> SumWalletTransactionCreditsAsync();
         Task<decimal> SumSupplierWalletPendingBalanceAsync();
         Task<(IEnumerable<WalletTransaction> Items, int TotalCount)> GetWalletTransactionsAdminAsync(int page, int pageSize);
+        Task<(IEnumerable<BookingDispute> Items, int TotalCount)> GetAllBookingDisputesAdminAsync(int page, int pageSize, DisputeStatus? status);
+        Task<BookingDispute?> GetBookingDisputeByIdAdminAsync(Guid disputeId);
+        Task<int> CountOpenBookingDisputesAsync();
     }
 }

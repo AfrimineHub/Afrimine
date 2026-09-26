@@ -41,18 +41,23 @@ namespace Afrimine.Services.BL.Implementation
             var vendors = await _admin.CountVendorsAsync();
             var totalRevenue = await _admin.GetTotalRevenueAsync();
             var pendingPayments = await _admin.GetPendingPaymentsAsync();
-            var openDisputes = await _admin.CountOpenDisputesAsync();
             var pendingListings = await _admin.CountListingsByStatusAsync(ListingStatus.PendingReview);
 
             var recentOrders = await _admin.GetRecentOrdersAsync(5);
             var recentKyc = await _admin.GetRecentKycSubmissionsAsync(3);
+
+            var orderOpenDisputes = await _admin.CountOpenDisputesAsync();
+            var bookingOpenDisputes = await _equipment.CountOpenBookingDisputesAsync();
+            var openDisputes = orderOpenDisputes + bookingOpenDisputes;
+
             var disputes = await _admin.GetOpenDisputesAsync(3);
+            var (recentBookingDisputes, _) = await _equipment.GetAllBookingDisputesAdminAsync(1, 3, DisputeStatus.Open);
 
             var stats = new List<AdminStatItemDto>
             {
                 new() {
                     Id = "total_users", Title = "Total Users",
-                    Value = totalUsers, IsNeutral = true 
+                    Value = totalUsers, IsNeutral = true
                 },
                 new() { Id = "active_users", Title = "Active Users",
                     Value = activeUsers, IsPositive = true },
@@ -76,6 +81,19 @@ namespace Afrimine.Services.BL.Implementation
                     Time = TimeAgo(d.CreatedAt),
                     ActionText = "Review",
                     ActionUrl = $"/admin/disputes/{d.Id}"
+                });
+            }
+            foreach (var d in recentBookingDisputes)
+            {
+                alerts.Add(new AdminAlertDto
+                {
+                    Id = d.Id.ToString(),
+                    Type = "danger",
+                    Title = "Open Dispute",
+                    Description = $"{d.RaisedBy?.FullName ?? "User"} raised a dispute: {d.Description[..Math.Min(60, d.Description.Length)]}",
+                    Time = TimeAgo(d.CreatedAt),
+                    ActionText = "Review",
+                    ActionUrl = $"/admin/booking-disputes/{d.Id}"
                 });
             }
             foreach (var k in recentKyc)
