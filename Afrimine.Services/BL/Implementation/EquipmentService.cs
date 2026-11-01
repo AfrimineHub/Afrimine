@@ -112,6 +112,7 @@ namespace Afrimine.Services.BL.Implementation
                 return ApiResponse<string>.Fail("Please complete all onboarding steps first.", 400);
 
             profile.IsSubmitted = true;
+            profile.KycSubmittedAt = DateTime.UtcNow;
             profile.Status = SupplierStatus.Pending;
             profile.OnboardingStep = 5;
             profile.UpdatedAt = DateTime.UtcNow;
