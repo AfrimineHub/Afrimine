@@ -234,7 +234,7 @@ namespace Afrimine.Repository
                 var numericOnly = new string(q.Where(c => char.IsDigit(c) || c == '.').ToArray());
                 var hasAmountMatch = decimal.TryParse(numericOnly, out var amountValue) && numericOnly.Length > 0;
 
-                DateTime? parsedDate = DateTime.TryParse(q, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt) ? DateTime.SpecifyKind(dt, DateTimeKind.Utc): null;
+                DateTime? parsedDate = DateTime.TryParse(q, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt) ? DateTime.SpecifyKind(dt, DateTimeKind.Utc) : null;
 
                 var statusMatch = Enum.TryParse<BookingStatus>(q, true, out var parsedStatus);
 
@@ -345,6 +345,17 @@ namespace Afrimine.Repository
 
         public async Task<int> CountOpenBookingDisputesAsync() =>
             await _context.Set<BookingDispute>().CountAsync(x => x.Status == DisputeStatus.Open);
+
+        public async Task<decimal> GetFrozenAmountAsync(Guid supplierId) =>
+        await _context.Set<Booking>()
+            .Where(b => b.SupplierId == supplierId && b.FundsFrozen && !b.IsDeleted)
+            .Select(b => (b.Milestone1Status == MilestoneStatus.Released ? b.Milestone1Amount : 0m)
+                       + (b.Milestone2Status == MilestoneStatus.Released ? b.Milestone2Amount : 0m)
+                       + (b.Milestone3Status == MilestoneStatus.Released ? b.Milestone3Amount : 0m))
+            .SumAsync();
+
+        public void UpdateBookingDispute(BookingDispute dispute) =>
+            _context.Set<BookingDispute>().Update(dispute);
     }
 }
     

@@ -63,5 +63,7 @@ namespace Afrimine.Repository
         Task<(IEnumerable<BookingDispute> Items, int TotalCount)> GetAllBookingDisputesAdminAsync(int page, int pageSize, DisputeStatus? status);
         Task<BookingDispute?> GetBookingDisputeByIdAdminAsync(Guid disputeId);
         Task<int> CountOpenBookingDisputesAsync();
+        Task<decimal> GetFrozenAmountAsync(Guid supplierId);
+        void UpdateBookingDispute(BookingDispute dispute);
     }
 }

@@ -4,7 +4,6 @@ using Afrimine.Services.Responses;
 using Afrimine.Shared.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Afrimine.Api.Controllers
@@ -309,6 +308,28 @@ namespace Afrimine.Api.Controllers
             var adminId = HttpContext.User.GetLoggedInUserId();
             if (string.IsNullOrWhiteSpace(adminId)) return Unauthorized();
             var response = await _service.Escrow.ReleaseFundsAsync(adminId, id);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [Authorize(Roles = Roles.SuperAdmin)]
+        [HttpPost("api/v{version:apiVersion}/admin/bookings/{id:guid}/freeze-funds")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> FreezeBookingFunds(Guid id, [FromBody] FreezeFundsDto? request)
+        {
+            var adminId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(adminId)) return Unauthorized();
+            var response = await _service.Equipment.FreezeBookingFundsAsync(adminId, id, request?.Reason);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [Authorize(Roles = Roles.SuperAdmin)]
+        [HttpPost("api/v{version:apiVersion}/admin/bookings/{id:guid}/release-funds")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        public async Task<IActionResult> ReleaseBookingFunds(Guid id)
+        {
+            var adminId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(adminId)) return Unauthorized();
+            var response = await _service.Equipment.ReleaseBookingFundsAsync(adminId, id);
             return StatusCode(response.StatusCode, response);
         }
     }

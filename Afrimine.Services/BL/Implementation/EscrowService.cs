@@ -11,12 +11,15 @@ namespace Afrimine.Services.BL.Implementation
     {
         private readonly IRepositoryManager _repository;
         private readonly IEquipmentRepository _equipment;
+        private readonly IEquipmentService _equipmentService;
 
 
-        public EscrowService(IRepositoryManager repository, IEquipmentRepository equipment)
+
+        public EscrowService(IRepositoryManager repository, IEquipmentRepository equipment, IEquipmentService equipmentService)
         {
             _repository = repository;
             _equipment = equipment;
+            _equipmentService = equipmentService;
         }
 
         public async Task<ApiResponse<EscrowStatusDto>> GetEscrowStatusAsync(string userId, Guid orderId)
@@ -336,33 +339,39 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<DisputeDto>.Fail("Dispute not found.", 404);
         }
 
-        public async Task<ApiResponse<string>> ResolveDisputeAsync(
-            string adminId, Guid disputeId, ResolveDisputeDto request)
+        public async Task<ApiResponse<string>> ResolveDisputeAsync(string adminId, Guid disputeId, ResolveDisputeDto request)
         {
+            var resolution = request.Resolution.Trim().ToLowerInvariant();
+            if (resolution == "release") resolution = "vendor";
+            if (resolution == "refund") resolution = "buyer";
+            var note = request.AdminNote ?? request.Notes;
+
             var dispute = await _repository.Dispute.GetByIdAsync(disputeId);
-            if (dispute is null) return ApiResponse<string>.Fail("Dispute not found.", 404);
-
-            dispute.Status = request.Resolution.ToLower() == "buyer"
-                ? DisputeStatus.ResolvedBuyer
-                : DisputeStatus.ResolvedVendor;
-            dispute.AdminNote = request.AdminNote;
-            dispute.ResolvedById = adminId;
-            dispute.ResolvedAt = DateTime.UtcNow;
-            _repository.Dispute.Update(dispute);
-
-            // Release or refund escrow based on resolution
-            var escrow = await _repository.Escrow.GetByOrderIdAsync(dispute.OrderId);
-            if (escrow is not null)
+            if (dispute is not null)
             {
-                escrow.Status = request.Resolution.ToLower() == "vendor"
-                    ? EscrowStatus.Released
-                    : EscrowStatus.Refunded;
-                escrow.ReleasedAt = DateTime.UtcNow;
-                _repository.Escrow.Update(escrow);
+                dispute.Status = resolution == "buyer" ? DisputeStatus.ResolvedBuyer : DisputeStatus.ResolvedVendor;
+                dispute.AdminNote = note;
+                dispute.ResolvedById = adminId;
+                dispute.ResolvedAt = DateTime.UtcNow;
+                _repository.Dispute.Update(dispute);
+
+                var escrow = await _repository.Escrow.GetByOrderIdAsync(dispute.OrderId);
+                if (escrow is not null)
+                {
+                    escrow.Status = resolution == "vendor" ? EscrowStatus.Released : EscrowStatus.Refunded;
+                    escrow.ReleasedAt = DateTime.UtcNow;
+                    _repository.Escrow.Update(escrow);
+                }
+
+                await _repository.SaveAsync();
+                return ApiResponse<string>.Ok($"Dispute resolved in favour of {resolution}.");
             }
 
-            await _repository.SaveAsync();
-            return ApiResponse<string>.Ok($"Dispute resolved in favour of {request.Resolution}.");
+            var bookingDispute = await _equipment.GetBookingDisputeByIdAdminAsync(disputeId);
+            if (bookingDispute is not null) 
+                return await _equipmentService.ResolveBookingDisputeAsync(adminId, disputeId, resolution, note);
+
+            return ApiResponse<string>.Fail("Dispute not found.", 404);
         }
 
         public async Task<ApiResponse<string>> FreezeOrderAsync(string adminId, Guid orderId)

@@ -163,24 +163,14 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-
-        /// <summary>Refresh the access token using the refresh token cookie</summary>
-        /// <remarks>
-        /// Returns a new JWT access token without requiring the user to log in again.
-        /// The refresh token is stored as an `HttpOnly` cookie — it is sent automatically by the browser.
-        ///
-        /// **When to call this:** When you receive a `401 Unauthorized` response, call this endpoint to get a new token,
-        /// then retry the original request with the new token.
-        ///
-        /// **Refresh token expiry:** 7 days.
-        /// </remarks>
+        [AllowAnonymous]
         [HttpPost("refresh-token")]
         [ProducesResponseType(typeof(ApiResponse<LoginResponseDto>), 200)]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request)
+        public async Task<IActionResult> RefreshToken()
         {
             var refreshToken = Request.Cookies["refreshToken"];
 
-            var response = await _service.User.RefreshTokenAsync(refreshToken, request);
+            var response = await _service.User.RefreshTokenAsync(refreshToken);
             if (!response.Success)
                 return StatusCode(response.StatusCode, response);
 
@@ -224,17 +214,18 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        private void SetRefreshTokenCookie(string refreshToken)
+        // Same attributes for set and delete — a cookie is only removed if Path/Secure/SameSite match.
+        private static CookieOptions BuildRefreshTokenCookieOptions(DateTimeOffset? expires = null) => new()
         {
-            var isProduction = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production";
+            HttpOnly = true,               // JS cannot read it
+            Secure = true,                 // HTTPS only (required by SameSite=None)
+            SameSite = SameSiteMode.None,  // frontend and API are on different domains
+            Path = "/",
+            Expires = expires
+        };
 
-            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
-            {
-                HttpOnly = true,                                                    // JS cannot access
-                Secure = isProduction,                                              // HTTPS only in production
-                SameSite = isProduction ? SameSiteMode.None : SameSiteMode.Lax,   // cross-origin in production
-                Expires = DateTime.UtcNow.AddDays(7)
-            });
-        }
+        private void SetRefreshTokenCookie(string refreshToken) =>
+            Response.Cookies.Append("refreshToken", refreshToken,
+                BuildRefreshTokenCookieOptions(DateTimeOffset.UtcNow.AddDays(7)));
     }
 }

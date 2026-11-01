@@ -407,20 +407,16 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<string>.Ok(user.Email!, 200, message);
         }
 
-        public async Task<ApiResponse<LoginResponseDto>> RefreshTokenAsync(string? refreshToken, RefreshTokenRequestDto request)
+        public async Task<ApiResponse<LoginResponseDto>> RefreshTokenAsync(string? refreshToken)
         {
             if (string.IsNullOrWhiteSpace(refreshToken))
                 return ApiResponse<LoginResponseDto>.Fail("Refresh token missing.", StatusCodes.Status401Unauthorized);
 
-            var principal = GetPrincipalFromExpiredToken(request.AccessToken);
-            if (principal == null)
-                return ApiResponse<LoginResponseDto>.Fail("Invalid access token.", StatusCodes.Status401Unauthorized);
-
-            var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await _userManager.FindByIdAsync(userId!);
+            // The cookie is the only credential: find the account that owns this refresh token.
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
 
             if (user == null
-                || user.RefreshToken != refreshToken
+                || user.RefreshTokenExpiry == null
                 || user.RefreshTokenExpiry <= DateTime.UtcNow)
             {
                 return ApiResponse<LoginResponseDto>.Fail("Invalid or expired refresh token.", StatusCodes.Status401Unauthorized);

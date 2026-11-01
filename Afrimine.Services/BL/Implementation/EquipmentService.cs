@@ -840,6 +840,11 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
                 if (raised) dispute.PayscrowDisputeRef = booking.PayscrowTransactionNumber;
             }
 
+            booking.FundsFrozen = true;
+            booking.FundsFrozenAt = DateTime.UtcNow;
+            booking.FundsFrozenReason = "Dispute opened";
+            _equipment.UpdateBooking(booking);
+
             await _equipment.AddDisputeAsync(dispute);
             await _repository.SaveAsync();
 
@@ -876,8 +881,15 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
         {
             var wallet = await _equipment.GetWalletAsync(supplierId);
             if (wallet is null) return ApiResponse<string>.Fail("Wallet not found.", 404);
-            if (wallet.AvailableBalance < request.Amount)
-                return ApiResponse<string>.Fail("Insufficient balance.", 400);
+
+            var frozenAmount = Math.Min(await _equipment.GetFrozenAmountAsync(supplierId), wallet.AvailableBalance);
+            var withdrawable = wallet.AvailableBalance - frozenAmount;
+
+            if (withdrawable < request.Amount) 
+                return ApiResponse<string>.Fail(
+                    frozenAmount > 0
+                        ? $"Insufficient withdrawable balance — {wallet.Currency} {frozenAmount:N0} is frozen pending an open dispute."
+                        : "Insufficient balance.", 400);
 
             wallet.AvailableBalance -= request.Amount;
             _equipment.UpdateWallet(wallet);
@@ -1288,6 +1300,75 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
                 }
             };
             return dto;
+        }
+
+        public async Task<ApiResponse<string>> FreezeBookingFundsAsync(string adminId, Guid bookingId, string? reason)
+        {
+            var booking = await _equipment.GetBookingByIdAdminAsync(bookingId);
+            if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
+
+            booking.FundsFrozen = true;
+            booking.FundsFrozenAt = DateTime.UtcNow;
+            booking.FundsFrozenReason = string.IsNullOrWhiteSpace(reason) ? "Frozen by admin" : reason;
+            _equipment.UpdateBooking(booking);
+            await _repository.SaveAsync();
+            return ApiResponse<string>.Ok("Disputed funds frozen. They can't be withdrawn until released.");
+        }
+
+        public async Task<ApiResponse<string>> ReleaseBookingFundsAsync(string adminId, Guid bookingId)
+        {
+            var booking = await _equipment.GetBookingByIdAdminAsync(bookingId);
+            if (booking is null) return ApiResponse<string>.Fail("Booking not found.", 404);
+
+            booking.FundsFrozen = false;
+            booking.FundsFrozenAt = null;
+            booking.FundsFrozenReason = null;
+            _equipment.UpdateBooking(booking);
+            await _repository.SaveAsync();
+            return ApiResponse<string>.Ok("Funds released. The vendor can withdraw them again.");
+        }
+
+        public async Task<ApiResponse<string>> ResolveBookingDisputeAsync(string adminId, Guid disputeId, string resolution, string? adminNote)
+        {
+            var dispute = await _equipment.GetBookingDisputeByIdAdminAsync(disputeId);
+            if (dispute is null) return ApiResponse<string>.Fail("Dispute not found.", 404);
+
+            var r = resolution.Trim().ToLowerInvariant();
+            var favorVendor = r is "vendor" or "release";
+            var favorBuyer = r is "buyer" or "refund";
+            if (!favorVendor && !favorBuyer)
+                return ApiResponse<string>.Fail("Resolution must be 'vendor' or 'buyer'.", 400);
+
+            dispute.Status = favorVendor ? DisputeStatus.ResolvedVendor : DisputeStatus.ResolvedBuyer;
+            dispute.Resolution = adminNote;
+            _equipment.UpdateBookingDispute(dispute);
+
+            var booking = dispute.Booking;
+            if (favorVendor)
+            {
+                booking.FundsFrozen = false;
+                booking.FundsFrozenAt = null;
+                booking.FundsFrozenReason = null;
+                _equipment.UpdateBooking(booking);
+            }
+            await _repository.SaveAsync();
+
+            if (!favorVendor)
+                return ApiResponse<string>.Ok(
+                    "Dispute resolved in favour of the buyer. Funds stay frozen. Process the refund manually via Payscrow, then use Release Funds.");
+
+            int? nextMilestone = booking.Milestone1Status != MilestoneStatus.Released ? 1
+                : booking.Milestone2Status != MilestoneStatus.Released ? 2
+                : booking.Milestone3Status != MilestoneStatus.Released ? 3
+                : (int?)null;
+
+            if (nextMilestone is null)
+                return ApiResponse<string>.Ok("Dispute resolved in favour of the vendor. All milestones were already released.");
+
+            var release = await AdminReleaseMilestoneAsync(adminId, booking.Id, nextMilestone.Value);
+            return release.Success
+                ? ApiResponse<string>.Ok($"Dispute resolved in favour of the vendor. Milestone {nextMilestone} released.")
+                : ApiResponse<string>.Ok($"Dispute resolved in favour of the vendor, but the milestone release failed: {release.Message}");
         }
 
         private static BookingDisputeResponseDto MapToDisputeDto(BookingDispute d) => new()
