@@ -47,13 +47,15 @@ namespace Afrimine.Services.BL.Implementation
             if (listing is null)
                 return ApiResponse<VendorListingDetailDto>.Fail("Listing not found.", 404);
 
+            // Allow any authenticated user to view listing details (not just the owner).
+            // Increment view count only for non-owners.
             if (listing.OwnerId != vendorId)
-                return ApiResponse<VendorListingDetailDto>.Fail("Access denied.", 403);
-            // Increment view count — only non-owners
-            listing.ViewsCount++;
-            listing.UpdatedAt = DateTime.UtcNow;
-            _repository.Listing.Update(listing);
-            await _repository.SaveAsync();
+            {
+                listing.ViewsCount++;
+                listing.UpdatedAt = DateTime.UtcNow;
+                _repository.Listing.Update(listing);
+                await _repository.SaveAsync();
+            }
 
             return ApiResponse<VendorListingDetailDto>.Ok(MapToDetailDto(listing));
         }
