@@ -67,102 +67,112 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<LoginResponseDto>> GoogleLoginAsync(GoogleLoginRequestDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.IdToken))
-            {
-                return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.InvalidRequest, 400);
-            }
-
-            if (string.IsNullOrWhiteSpace(_settings.GoogleClientId))
-            {
-                return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.GoogleLoginFailed, 500);
-            }
-
-            GoogleJsonWebSignature.Payload payload;
             try
             {
-                payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
+                if (string.IsNullOrWhiteSpace(request.IdToken))
                 {
-                    Audience = new[] { _settings.GoogleClientId }
-                });
-            }
-            catch (InvalidJwtException)
-            {
-                return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.InvalidGoogleToken, 401);
-            }
+                    return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.InvalidRequest, 400);
+                }
 
-            if (!payload.EmailVerified)
-            {
-                return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.GoogleEmailNotVerified, 401);
-            }
+                if (string.IsNullOrWhiteSpace(_settings.GoogleClientId))
+                {
+                    return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.GoogleLoginFailed, 500);
+                }
 
-            // Already linked to a Google login before? Use that account.
-            var user = await _userManager.FindByLoginAsync(GoogleLoginProvider, payload.Subject);
+                GoogleJsonWebSignature.Payload payload;
+                try
+                {
+                    payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { _settings.GoogleClientId }
+                    });
+                }
+                catch (InvalidJwtException)
+                {
+                    return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.InvalidGoogleToken, 401);
+                }
 
-            if (user == null)
-            {
-                // First time signing in with Google - see if an account with this email already exists.
-                user = await _userManager.FindByEmailAsync(payload.Email);
+                if (!payload.EmailVerified)
+                {
+                    return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.GoogleEmailNotVerified, 401);
+                }
+
+                // Already linked to a Google login before? Use that account.
+                var user = await _userManager.FindByLoginAsync(GoogleLoginProvider, payload.Subject);
 
                 if (user == null)
                 {
-                    var allowedRoles = new[] { RoleType.Buyer, RoleType.Vendor, RoleType.Investor };
-                    var type = allowedRoles.Contains(request.Type) ? request.Type : RoleType.Buyer;
+                    // First time signing in with Google - see if an account with this email already exists.
+                    user = await _userManager.FindByEmailAsync(payload.Email);
 
-                    user = new User
+                    if (user == null)
                     {
-                        FullName = string.IsNullOrWhiteSpace(payload.Name) ? payload.Email : payload.Name,
-                        UserName = payload.Email,
-                        Email = payload.Email,
-                        EmailConfirmed = true,      // Google has already verified this email
-                        Status = AccountStatus.Active,
-                        Type = type,
-                        AvatarUrl = payload.Picture
-                    };
+                        var allowedRoles = new[] { RoleType.Buyer, RoleType.Vendor, RoleType.Investor };
+                        var type = allowedRoles.Contains(request.Type) ? request.Type : RoleType.Buyer;
 
-                    var createResult = await _userManager.CreateAsync(user);
-                    if (!createResult.Succeeded)
-                    {
-                        return ApiResponse<LoginResponseDto>.Fail(
-                            createResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed, 400);
+                        user = new User
+                        {
+                            FullName = string.IsNullOrWhiteSpace(payload.Name) ? payload.Email : payload.Name,
+                            UserName = payload.Email,
+                            Email = payload.Email,
+                            EmailConfirmed = true,      // Google has already verified this email
+                            Status = AccountStatus.Active,
+                            Type = type,
+                            AvatarUrl = payload.Picture
+                        };
+
+                        var createResult = await _userManager.CreateAsync(user);
+                        if (!createResult.Succeeded)
+                        {
+                            return ApiResponse<LoginResponseDto>.Fail(
+                                createResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed, 400);
+                        }
+
+                        var roleResult = await _userManager.AddToRoleAsync(user, type.ToString());
+                        if (!roleResult.Succeeded)
+                        {
+                            await _userManager.DeleteAsync(user);
+                            return ApiResponse<LoginResponseDto>.Fail(
+                                roleResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed, 400);
+                        }
                     }
 
-                    var roleResult = await _userManager.AddToRoleAsync(user, type.ToString());
-                    if (!roleResult.Succeeded)
+                    var linkResult = await _userManager.AddLoginAsync(user, new UserLoginInfo(GoogleLoginProvider, payload.Subject, GoogleLoginProvider));
+                    if (!linkResult.Succeeded)
                     {
-                        await _userManager.DeleteAsync(user);
                         return ApiResponse<LoginResponseDto>.Fail(
-                            roleResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.RegistrationFailed, 400);
+                            linkResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.GoogleLoginFailed, 400);
                     }
                 }
 
-                var linkResult = await _userManager.AddLoginAsync(user, new UserLoginInfo(GoogleLoginProvider, payload.Subject, GoogleLoginProvider));
-                if (!linkResult.Succeeded)
+                if (user.Status != AccountStatus.Active)
                 {
-                    return ApiResponse<LoginResponseDto>.Fail(
-                        linkResult.Errors?.FirstOrDefault()?.Description ?? ResponseMessages.GoogleLoginFailed, 400);
+                    return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.EmailNotConfirmedOrInactive, 403);
                 }
-            }
 
-            if (user.Status != AccountStatus.Active)
+                var roles = await _userManager.GetRolesAsync(user);
+                if (roles == null || roles.Count == 0)
+                {
+                    return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.NoAssignedRole, 403);
+                }
+
+                var accessToken = CreateAccessToken(user.Id, user.Email!, roles.ToArray());
+                var refreshToken = GenerateRefreshToken();
+                user.RefreshToken = refreshToken;
+                user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+                user.LastLogin = DateTime.UtcNow;
+
+                await _userManager.UpdateAsync(user);
+
+                return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(accessToken), refreshToken);
+            }
+            catch (Exception ex)
             {
-                return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.EmailNotConfirmedOrInactive, 403);
+
+                return ApiResponse<LoginResponseDto>.Fail(
+                            $"Google signup failed: {ex.GetType().Name} - {ex.Message}", 500);
             }
-
-            var roles = await _userManager.GetRolesAsync(user);
-            if (roles == null || roles.Count == 0)
-            {
-                return ApiResponse<LoginResponseDto>.Fail(ResponseMessages.NoAssignedRole, 403);
-            }
-
-            var accessToken = CreateAccessToken(user.Id, user.Email!, roles.ToArray());
-            var refreshToken = GenerateRefreshToken();
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
-            user.LastLogin = DateTime.UtcNow;
-
-            await _userManager.UpdateAsync(user);
-
-            return ApiResponse<LoginResponseDto>.Ok(new LoginResponseDto(accessToken), refreshToken);
+          
         }
 
         public async Task<ApiResponse<CurrentUserDto>> GetCurrentUser(string? userId)
