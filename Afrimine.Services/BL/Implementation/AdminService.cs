@@ -104,7 +104,7 @@ namespace Afrimine.Services.BL.Implementation
                     Type = "warning",
                     Title = "KYC Pending Review",
                     Description = $"{k.User?.FullName ?? "Vendor"} submitted KYC documents",
-                    Time = TimeAgo(k.CreatedAt),
+                    Time = TimeAgo(k.KycSubmittedAt ?? k.CreatedAt),
                     ActionText = "Review",
                     ActionUrl = $"/admin/kyc/review/{k.Id}"
                 });
@@ -672,8 +672,7 @@ namespace Afrimine.Services.BL.Implementation
         // ── KYC ───────────────────────────────────────────────────────────────
         public async Task<ApiResponse<PagedResultDto<AdminKycQueueItemDto>>> GetKycQueueAsync(AdminKycQueryDto query)
         {
-            var (items, total) = await _admin.GetKycQueueAsync(
-                query.Q, query.Status, query.Page, query.PageSize);
+            var (items, total) = await _admin.GetKycQueueAsync(query.Q, query.Status, query.Page, query.PageSize);
 
             return ApiResponse<PagedResultDto<AdminKycQueueItemDto>>.Ok(
                 new PagedResultDto<AdminKycQueueItemDto>
@@ -686,7 +685,7 @@ namespace Afrimine.Services.BL.Implementation
                         Email = p.User?.Email,
                         Phone = p.User?.PhoneNumber ?? p.BusinessPhone,
                         CompanyName = p.CompanyName,
-                        SubmittedAt = p.CreatedAt.ToString("O"),
+                        SubmittedAt = (p.KycSubmittedAt ?? p.CreatedAt).ToString("O"),
                         Status = p.Status.ToString().ToLower()
                     }),
                     TotalCount = total,
@@ -782,7 +781,7 @@ namespace Afrimine.Services.BL.Implementation
                 DocumentType = p.DocumentType?.ToString(),
                 DocumentIdNumber = p.DocumentIdNumber,
                 Country = p.Country,
-                SubmittedAt = p.CreatedAt.ToString("O"),
+                SubmittedAt = (p.KycSubmittedAt ?? p.CreatedAt).ToString("O"),
                 ProfilePhotoUrl = p.ProfilePhotoUrl,
                 Status = p.Status.ToString().ToLower(),
                 RejectionReason = p.RejectionReason,

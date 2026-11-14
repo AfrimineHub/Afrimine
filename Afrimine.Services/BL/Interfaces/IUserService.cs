@@ -12,7 +12,6 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<CurrentUserDto>> GetCurrentUser(string? userId);
         Task<ApiResponse<VendorProfileResponseDto>> GetVendorProfileAsync(string userId);
         Task<ApiResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request);
-        Task<ApiResponse<LoginResponseDto>> RefreshTokenAsync(string? refreshToken, RefreshTokenRequestDto request);
         Task<ApiResponse<string>> RegisterUserAsync(RegisterRequestDto request);
         Task<ApiResponse<string>> ResendOtpAsync(ResendOtpRequestDto request);
         Task<ApiResponse<string>> ResetPassword(PasswordResetDto passwordResetDto);
@@ -22,5 +21,6 @@ namespace Afrimine.Services.BL.Interfaces
         Task<ApiResponse<string>> ChangePasswordAsync(string userId, ChangePasswordDto request);
         Task<ApiResponse<string>> UploadProfilePhotoAsync(string userId, ProfilePhotoUploadDto request);
         Task<ApiResponse<LoginResponseDto>> GoogleLoginAsync(GoogleLoginRequestDto request);
+        Task<ApiResponse<LoginResponseDto>> RefreshTokenAsync(string? refreshToken);
     }
 }

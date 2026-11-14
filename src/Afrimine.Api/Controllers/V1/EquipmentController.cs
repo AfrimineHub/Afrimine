@@ -252,7 +252,7 @@ namespace Afrimine.Api.Controllers.V1
         /// **MobilizationFeePerKm** — transport cost per km charged to the buyer for delivering the machine to their site
         /// **HasCertifiedOperator** — set `true` if this machine comes with its own certified operator included in the rental
         /// </remarks>
-        [Authorize(Roles = Roles.Vendor)]
+        [AllowAnonymous]
         [HttpPost("assets")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -279,7 +279,8 @@ namespace Afrimine.Api.Controllers.V1
         /// - `UnderMaintenance` — being serviced, not available
         /// - `Inactive` — manually deactivated by supplier
         /// </remarks>
-        [Authorize(Roles = Roles.Vendor)]
+        //[Authorize(Roles = Roles.Vendor)]
+        [AllowAnonymous]
         [HttpGet("assets")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -638,8 +639,8 @@ namespace Afrimine.Api.Controllers.V1
         ///
         /// **MinerPhone** is required by PayScrow to create the escrow transaction (Nigerian format: 08012345678).
         /// </remarks>
-        
-        [Authorize(Roles = Roles.Buyer)]
+        [AllowAnonymous]
+        //[Authorize(Roles = Roles.Buyer)]
         [HttpPost("bookings")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -669,7 +670,8 @@ namespace Afrimine.Api.Controllers.V1
         /// - `Cancelled` — cancelled before dispatch
         /// </remarks>
         
-        [Authorize(Roles = Roles.VendorAndBuyer)]
+        //[Authorize(Roles = Roles.VendorAndBuyer)]
+        [AllowAnonymous]
         [HttpGet("bookings")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -715,7 +717,8 @@ namespace Afrimine.Api.Controllers.V1
         ///
         /// After approving, dispatch the machine using `POST /bookings/{id}/dispatch`.
         /// </remarks>
-        [Authorize(Roles = Roles.Vendor)]
+        //[Authorize(Roles = Roles.Vendor)]
+        [AllowAnonymous]
         [HttpPut("bookings/{bookingId:guid}/approve")]
         [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

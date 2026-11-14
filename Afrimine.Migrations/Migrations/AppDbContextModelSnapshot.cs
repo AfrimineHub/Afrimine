@@ -170,6 +170,15 @@ namespace Afrimine.Migrations.Migrations
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("FundsFrozen")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("FundsFrozenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FundsFrozenReason")
+                        .HasColumnType("text");
+
                     b.Property<bool>("GitInsuranceActive")
                         .HasColumnType("boolean");
 
@@ -1755,6 +1764,9 @@ namespace Afrimine.Migrations.Migrations
                     b.Property<int>("KycStatus")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("KycSubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<double?>("Latitude")
                         .HasColumnType("double precision");
 
@@ -2137,35 +2149,35 @@ namespace Afrimine.Migrations.Migrations
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b526",
-                            ConcurrencyStamp = "9/20/2026 5:48:21 PM",
+                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
                             Name = "Vendor",
                             NormalizedName = "VENDOR"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b527",
-                            ConcurrencyStamp = "9/20/2026 5:48:21 PM",
+                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
                             Name = "Buyer",
                             NormalizedName = "BUYER"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b528",
-                            ConcurrencyStamp = "9/20/2026 5:48:21 PM",
+                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
                             Name = "Support",
                             NormalizedName = "SUPPORT"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b529",
-                            ConcurrencyStamp = "9/20/2026 5:48:21 PM",
+                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
                             Name = "SuperAdmin",
                             NormalizedName = "SUPERADMIN"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b530",
-                            ConcurrencyStamp = "9/20/2026 5:48:21 PM",
+                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
                             Name = "Investor",
                             NormalizedName = "INVESTOR"
                         });

@@ -78,5 +78,8 @@ namespace Afrimine.Services.BL.Interfaces
         // Admin — milestones
         Task<ApiResponse<PagedResultDto<AdminMilestoneItemDto>>> GetAllMilestonesAsync(AdminMilestoneQueryDto query);
         Task<ApiResponse<string>> AdminReleaseMilestoneAsync(string adminId, Guid bookingId, int milestoneNumber);
+        Task<ApiResponse<string>> ReleaseBookingFundsAsync(string adminId, Guid bookingId);
+        Task<ApiResponse<string>> ResolveBookingDisputeAsync(string adminId, Guid disputeId, string resolution, string? adminNote);
+        Task<ApiResponse<string>> FreezeBookingFundsAsync(string adminId, Guid bookingId, string? reason);
     }
 }

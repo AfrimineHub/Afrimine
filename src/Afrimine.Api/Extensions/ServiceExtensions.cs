@@ -50,7 +50,15 @@ namespace Afrimine.Api.Extensions
                 options.AddPolicy("Frontend", policy =>
                 {
                     policy
-                        .WithOrigins("https://afrimine-client-latest.onrender.com") // your frontend URL
+                        .WithOrigins(
+                            "https://afrimine-client-latest.onrender.com",
+                            "http://localhost:3000",
+                            "http://localhost:5173",
+                            "http://localhost:4200",
+                            "http://127.0.0.1:3000",
+                            "http://127.0.0.1:5173",
+                            "http://127.0.0.1:4200"
+                        )
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();

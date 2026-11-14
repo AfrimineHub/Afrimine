@@ -42,6 +42,7 @@ namespace Afrimine.Services.DTOs
     {
         [Required] public string Resolution { get; set; } = string.Empty; // "buyer" or "vendor"
         public string? AdminNote { get; set; }
+        public string? Notes { get; set; }
     }
 
     public class VendorQuoteSubmitDto

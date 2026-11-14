@@ -24,6 +24,7 @@ namespace Afrimine.Model.Entities
         public string? RejectionReason { get; set; }
         public int OnboardingStep { get; set; } = 1;
         public bool IsSubmitted { get; set; } = false;
+        public DateTime? KycSubmittedAt { get; set; }
         public string? BankName { get; set; }
         public string? BankCode { get; set; }
         public string? BankAccountNumber { get; set; }

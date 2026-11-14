@@ -60,5 +60,8 @@ namespace Afrimine.Model.Entities
         // Daily checks
         public ICollection<DailyCheck> DailyChecks { get; set; } = new List<DailyCheck>();
         public ICollection<BookingDispute> Disputes { get; set; } = new List<BookingDispute>();
+        public bool FundsFrozen { get; set; } = false;
+        public DateTime? FundsFrozenAt { get; set; }
+        public string? FundsFrozenReason { get; set; }
     }
 }

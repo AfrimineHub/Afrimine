@@ -277,8 +277,14 @@ namespace Afrimine.Repository
             }
 
             var total = await query.CountAsync();
+            //var items = await query
+            //    .OrderByDescending(x => x.CreatedAt)
+            //    .Skip((page - 1) * pageSize)
+            //    .Take(pageSize)
+            //    .ToListAsync();
+
             var items = await query
-                .OrderByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.KycSubmittedAt ?? x.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -301,11 +307,11 @@ namespace Afrimine.Repository
                 .Where(x => !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt).Take(count).ToListAsync();
 
-        public async Task<IEnumerable<SupplierProfile>> GetRecentKycSubmissionsAsync(int count) =>
+        public async Task<IEnumerable<SupplierProfile>> GetRecentKycSubmissionsAsync(int count) => 
             await _context.Set<SupplierProfile>()
-                .Include(x => x.User)
-                .Where(x => x.Status == SupplierStatus.Pending)
-                .OrderByDescending(x => x.CreatedAt).Take(count).ToListAsync();
+            .Include(x => x.User)
+            .Where(x => x.Status == SupplierStatus.Pending)
+            .OrderByDescending(x => x.KycSubmittedAt ?? x.CreatedAt).Take(count).ToListAsync();
 
         public async Task<IEnumerable<Dispute>> GetOpenDisputesAsync(int count) =>
             await _context.Set<Dispute>()
