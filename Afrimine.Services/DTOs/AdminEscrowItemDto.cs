@@ -4,7 +4,12 @@
     public class AdminEscrowItemDto
     {
         public string Id { get; set; } = string.Empty;
+        public string Source { get; set; } = "Order";   // "Order" | "Booking"
         public string OrderId { get; set; } = string.Empty;
+        public string? BookingId { get; set; }
+        public string? ListingTitle { get; set; }
+        public string? PaymentStatus { get; set; }
+        public bool FundsFrozen { get; set; }
         public string? BuyerName { get; set; }
         public string? VendorName { get; set; }
         public decimal Amount { get; set; }

@@ -23,6 +23,7 @@ namespace Afrimine.Repository
         // Revenue
         Task<decimal> GetTotalRevenueAsync();
         Task<decimal> GetTotalRevenueLastMonthAsync();
+        Task<decimal> GetTotalRevenueBetweenAsync(DateTime from, DateTime to);
         Task<decimal> GetVendorPayoutsAsync();
         Task<decimal> GetVendorPayoutsLastMonthAsync();
         Task<decimal> GetPendingPaymentsAsync();

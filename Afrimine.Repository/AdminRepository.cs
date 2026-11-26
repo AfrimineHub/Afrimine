@@ -197,6 +197,11 @@ namespace Afrimine.Repository
                 .SumAsync(x => x.Amount);
         }
 
+        public async Task<decimal> GetTotalRevenueBetweenAsync(DateTime from, DateTime to) =>
+            await _context.Set<Revenue>()
+                .Where(x => x.TransactionDate >= from && x.TransactionDate < to)
+                .SumAsync(x => x.Amount);
+
         public async Task<decimal> GetVendorPayoutsAsync() =>
             await _context.Set<Payout>()
                 .Where(x => x.Status == PayoutStatus.Completed)
@@ -299,7 +304,7 @@ namespace Afrimine.Repository
 
         // ── Dashboard helpers ──────────────────────────────────────────────────
         public async Task<int> CountOpenDisputesAsync() =>
-            await _context.Set<Dispute>().CountAsync(x => x.Status == DisputeStatus.Open);
+            await _context.Set<Dispute>().CountAsync(x => x.Status == DisputeStatus.Open || x.Status == DisputeStatus.UnderReview);
 
         public async Task<IEnumerable<Order>> GetRecentOrdersAsync(int count) =>
             await _context.Set<Order>()
