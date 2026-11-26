@@ -21,6 +21,20 @@
 
         }
 
+        public static string GetWithdrawalOtpTemplate(string otp, string amount)
+        {
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Templates", "WithdrawalOtp.html");
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException(filePath);
+            }
+
+            return File.ReadAllText(filePath)
+                .Replace("{otp}", otp)
+                .Replace("{amount}", System.Net.WebUtility.HtmlEncode(amount))
+                .Replace("{year}", DateTime.Now.Year.ToString());
+        }
+
         public static string GetResetPasswordEmailTemplate(string otp)
         {
             string body;

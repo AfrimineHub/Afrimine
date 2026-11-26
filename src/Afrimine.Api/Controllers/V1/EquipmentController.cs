@@ -1192,9 +1192,35 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
-        /// <summary>Request a bank withdrawal from available balance (Vendor only)</summary>
+        /// <summary>Step 1 of 2: email a withdrawal verification code (Vendor only)</summary>
+        /// <remarks>
+        /// Checks the amount against the withdrawable balance and emails a 6-digit code to the vendor.
+        ///
+        /// - The code is valid for **5 minutes** and only for the **exact amount and currency** sent here.
+        /// - Requesting a new code invalidates the previous one. One request per 60 seconds (`429` otherwise).
+        /// - Then call `POST wallet/withdrawal` with the same amount/currency plus `otp`.
+        /// </remarks>
+        [Authorize(Roles = Roles.Vendor)]
+        [HttpPost("wallet/withdrawal/otp")]
+        [ProducesResponseType(typeof(ApiResponse<WithdrawalOtpResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+        public async Task<IActionResult> RequestWithdrawalOtp([FromBody] WithdrawalOtpRequestDto request)
+        {
+            var userId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+            var response = await _service.Equipment.RequestWithdrawalOtpAsync(Guid.Parse(userId), request);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>Step 2 of 2: request a bank withdrawal from available balance (Vendor only)</summary>
         /// <remarks>
         /// Submits a withdrawal request to transfer funds from `availableBalance` to the supplier's registered bank account.
+        ///
+        /// **Requires 2FA:** first call `POST wallet/withdrawal/otp`, then send the emailed code as `otp`
+        /// with the **same** `amount` and `currency`. After 5 wrong codes the code is invalidated.
         ///
         /// **Requirements:**
         /// - Bank account details must be set up in your supplier profile (`BankName`, `BankCode`, `BankAccountNumber`, `BankAccountName`)

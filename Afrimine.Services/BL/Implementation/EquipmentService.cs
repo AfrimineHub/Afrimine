@@ -6,6 +6,8 @@ using Afrimine.Services.BL.Interfaces;
 using Afrimine.Services.DTOs;
 using Afrimine.Services.Responses;
 using Afrimine.Shared.Configs;
+using Afrimine.Shared.ExternalServices;
+using Afrimine.Shared.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -891,21 +893,134 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             });
         }
 
-        public async Task<ApiResponse<string>> RequestWithdrawalAsync(Guid supplierId, WithdrawalRequestDto request)
+        // ── Withdrawal 2FA (email OTP) ────────────────────────────────────────
+        private const int WithdrawalOtpExpiryMinutes = 5;
+        private const int WithdrawalOtpMaxAttempts = 5;
+        private static readonly TimeSpan WithdrawalOtpResendCooldown = TimeSpan.FromSeconds(60);
+
+        // Binds a code to one exact amount + currency, so a code issued for 1,000 can't confirm 1,000,000.
+        private string WithdrawalBindingHash(Guid supplierId, decimal amount, string? currency) =>
+            TokenHelpers.HashToken(
+                $"{supplierId}|{amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}|{(currency ?? "NGN").Trim().ToUpperInvariant()}",
+                _config.JwtKey);
+
+        private static bool HashesEqual(string? a, string? b) =>
+            a is not null && b is not null &&
+            System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                System.Text.Encoding.UTF8.GetBytes(a), System.Text.Encoding.UTF8.GetBytes(b));
+
+        private static string MaskEmail(string email)
+        {
+            var at = email.IndexOf('@');
+            if (at <= 1) return email;
+            return $"{email[0]}{new string('*', Math.Max(1, at - 2))}{email[at - 1]}{email[at..]}";
+        }
+
+        private async Task<(decimal Withdrawable, decimal Frozen, SupplierWallet? Wallet)> GetWithdrawableAsync(Guid supplierId)
         {
             var wallet = await _equipment.GetWalletAsync(supplierId);
-            if (wallet is null) return ApiResponse<string>.Fail("Wallet not found.", 404);
+            if (wallet is null) return (0, 0, null);
+            var frozen = Math.Min(await _equipment.GetFrozenAmountAsync(supplierId), wallet.AvailableBalance);
+            return (wallet.AvailableBalance - frozen, frozen, wallet);
+        }
 
-            var frozenAmount = Math.Min(await _equipment.GetFrozenAmountAsync(supplierId), wallet.AvailableBalance);
-            var withdrawable = wallet.AvailableBalance - frozenAmount;
-
-            if (withdrawable < request.Amount) 
-                return ApiResponse<string>.Fail(
-                    frozenAmount > 0
-                        ? $"Insufficient withdrawable balance — {wallet.Currency} {frozenAmount:N0} is frozen pending an open dispute."
+        private static ApiResponse<T>? CheckWithdrawable<T>(decimal amount, decimal withdrawable, decimal frozen, SupplierWallet? wallet)
+        {
+            if (amount <= 0) return ApiResponse<T>.Fail("Amount must be greater than zero.", 400);
+            if (wallet is null) return ApiResponse<T>.Fail("Wallet not found.", 404);
+            if (withdrawable < amount)
+                return ApiResponse<T>.Fail(
+                    frozen > 0
+                        ? $"Insufficient withdrawable balance — {wallet.Currency} {frozen:N0} is frozen pending an open dispute."
                         : "Insufficient balance.", 400);
+            return null;
+        }
 
-            wallet.AvailableBalance -= request.Amount;
+        public async Task<ApiResponse<WithdrawalOtpResponseDto>> RequestWithdrawalOtpAsync(Guid supplierId, WithdrawalOtpRequestDto request)
+        {
+            var (withdrawable, frozen, wallet) = await GetWithdrawableAsync(supplierId);
+            var invalid = CheckWithdrawable<WithdrawalOtpResponseDto>(request.Amount, withdrawable, frozen, wallet);
+            if (invalid is not null) return invalid;
+
+            var user = await _userManager.FindByIdAsync(supplierId.ToString());
+            if (user is null || string.IsNullOrWhiteSpace(user.Email))
+                return ApiResponse<WithdrawalOtpResponseDto>.Fail("User not found.", 404);
+
+            var existing = await _repository.Otp.GetOtpByUser(user.Id, EToken.Withdrawal);
+            if (existing is not null)
+            {
+                var wait = existing.CreatedAt + WithdrawalOtpResendCooldown - DateTime.UtcNow;
+                if (wait > TimeSpan.Zero)
+                    return ApiResponse<WithdrawalOtpResponseDto>.Fail(
+                        $"Please wait {Math.Ceiling(wait.TotalSeconds)} seconds before requesting another code.", 429);
+                _repository.Otp.DeleteToken(existing);   // only the latest code is ever valid
+            }
+
+            var otp = TokenHelpers.GenerateOtp();
+            var entry = ObjectsInitializer.InitializeOtpEntry(
+                user.Id,
+                TokenHelpers.HashToken(otp, _config.JwtKey),
+                EToken.Withdrawal,
+                WithdrawalOtpExpiryMinutes,
+                tokenHash: WithdrawalBindingHash(supplierId, request.Amount, request.Currency));
+
+            await _repository.Otp.CreateToken(entry);
+            await _repository.SaveAsync();
+
+            var amountText = $"{(request.Currency ?? "NGN").ToUpperInvariant()} {request.Amount:N2}";
+            var html = GetEmailTemplate.GetWithdrawalOtpTemplate(otp, amountText);
+            Notifications.SendEmail(user.Email, "Confirm your withdrawal", html, html);
+
+            return ApiResponse<WithdrawalOtpResponseDto>.Ok(new WithdrawalOtpResponseDto
+            {
+                SentTo = MaskEmail(user.Email),
+                ExpiresAt = entry.ExpiresAt
+            }, 200, "Verification code sent to your email.");
+        }
+
+        public async Task<ApiResponse<string>> RequestWithdrawalAsync(Guid supplierId, WithdrawalRequestDto request)
+        {
+            var (withdrawable, frozenAmount, wallet) = await GetWithdrawableAsync(supplierId);
+            var invalid = CheckWithdrawable<string>(request.Amount, withdrawable, frozenAmount, wallet);
+            if (invalid is not null) return invalid;
+
+            // ── Verify the withdrawal OTP ──
+            var userId = supplierId.ToString();
+            var otpEntry = await _repository.Otp.GetOtpByUser(userId, EToken.Withdrawal);
+            if (otpEntry is null)
+                return ApiResponse<string>.Fail("Verification code required. Request one with POST wallet/withdrawal/otp.", 400);
+
+            if (otpEntry.ExpiresAt < DateTime.UtcNow || otpEntry.Attempts >= WithdrawalOtpMaxAttempts)
+            {
+                _repository.Otp.DeleteToken(otpEntry);
+                await _repository.SaveAsync();
+                return ApiResponse<string>.Fail("Verification code expired. Please request a new one.", 400);
+            }
+
+            var codeOk = !string.IsNullOrWhiteSpace(request.Otp)
+                && HashesEqual(otpEntry.OtpHash, TokenHelpers.HashToken(request.Otp.Trim(), _config.JwtKey));
+            var bindingOk = HashesEqual(otpEntry.TokenHash, WithdrawalBindingHash(supplierId, request.Amount, request.Currency));
+
+            if (!codeOk || !bindingOk)
+            {
+                otpEntry.Attempts++;
+                var remaining = WithdrawalOtpMaxAttempts - otpEntry.Attempts;
+                if (remaining <= 0) _repository.Otp.DeleteToken(otpEntry);
+                else _repository.Otp.UpdateToken(otpEntry);
+                await _repository.SaveAsync();
+
+                if (remaining <= 0)
+                    return ApiResponse<string>.Fail("Too many invalid attempts. Please request a new code.", 400);
+                return ApiResponse<string>.Fail(
+                    codeOk
+                        ? $"This code was issued for a different amount. {remaining} attempt(s) left."
+                        : $"Invalid verification code. {remaining} attempt(s) left.", 400);
+            }
+
+            // Consumed in the same save as the debit, so the code can't be replayed.
+            _repository.Otp.DeleteToken(otpEntry);
+
+            wallet!.AvailableBalance -= request.Amount;
             _equipment.UpdateWallet(wallet);
 
             await _equipment.AddWalletTransactionAsync(new WalletTransaction
@@ -927,6 +1042,16 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             });
 
             await _repository.SaveAsync();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (!string.IsNullOrWhiteSpace(user?.Email))
+            {
+                var amountText = System.Net.WebUtility.HtmlEncode($"{(request.Currency ?? "NGN").ToUpperInvariant()} {request.Amount:N2}");
+                var html = $"<p>A withdrawal of <strong>{amountText}</strong> was requested from your Afrimine wallet on {DateTime.UtcNow:dd MMM yyyy HH:mm} UTC.</p>"
+                         + "<p>It will be processed within 24–48 hours. If this wasn't you, contact support immediately and change your password.</p>";
+                Notifications.SendEmail(user.Email, "Withdrawal requested", html, html);
+            }
+
             return ApiResponse<string>.Ok("Withdrawal request submitted. Processing within 24-48 hours.");
         }
 

@@ -60,6 +60,7 @@ namespace Afrimine.Services.BL.Interfaces
 
         // Wallet
         Task<ApiResponse<WalletBalanceDto>> GetWalletBalanceAsync(Guid supplierId);
+        Task<ApiResponse<WithdrawalOtpResponseDto>> RequestWithdrawalOtpAsync(Guid supplierId, WithdrawalOtpRequestDto request);
         Task<ApiResponse<string>> RequestWithdrawalAsync(Guid supplierId, WithdrawalRequestDto request);
         Task<ApiResponse<IEnumerable<WalletTransactionDto>>> GetWalletTransactionsAsync(Guid supplierId);
 

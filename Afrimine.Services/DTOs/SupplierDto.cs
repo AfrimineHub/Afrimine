@@ -410,11 +410,28 @@ namespace Afrimine.Services.DTOs
             public string Currency { get; set; } = "NGN";
         }
 
+        public class WithdrawalOtpRequestDto
+        {
+            [Required]
+            public decimal Amount { get; set; }
+            public string Currency { get; set; } = "NGN";
+        }
+
+        public class WithdrawalOtpResponseDto
+        {
+            public string SentTo { get; set; } = string.Empty;   // masked email
+            public DateTime ExpiresAt { get; set; }
+        }
+
         public class WithdrawalRequestDto
         {
             [Required]
             public decimal Amount { get; set; }
             public string Currency { get; set; } = "NGN";
+
+            /// <summary>6-digit code emailed by POST wallet/withdrawal/otp.</summary>
+            [Required]
+            public string Otp { get; set; } = string.Empty;
         }
 
         public class WalletTransactionDto
