@@ -3,6 +3,7 @@
     public enum EToken
     {
         ConfirmEmail,
-        ResetPassword
+        ResetPassword,
+        Withdrawal
     }
 }
