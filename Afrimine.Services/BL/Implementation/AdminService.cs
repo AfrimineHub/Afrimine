@@ -39,9 +39,11 @@ namespace Afrimine.Services.BL.Implementation
             var activeUsers = await _admin.CountActiveUsersAsync();
             var kycVerified = await _admin.CountKycVerifiedAsync();
             var vendors = await _admin.CountVendorsAsync();
-            var totalRevenue = await _admin.GetTotalRevenueAsync();
-            var pendingPayments = await _admin.GetPendingPaymentsAsync();
-            var pendingListings = await _admin.CountListingsByStatusAsync(ListingStatus.PendingReview);
+            // Orders/Escrow/Revenue tables hold the (legacy) marketplace flow; equipment bookings
+            // paid through PayScrow carry the real money, so both are combined.
+            var totalRevenue = await _admin.GetTotalRevenueAsync() + await _equipment.SumBookingRevenueAsync();
+            var pendingPayments = await _admin.GetPendingPaymentsAsync() + await _equipment.SumBookingsHeldInEscrowAsync();
+            var pendingListings = await CountPendingListingsAsync();
 
             var recentOrders = await _admin.GetRecentOrdersAsync(5);
             var recentKyc = await _admin.GetRecentKycSubmissionsAsync(3);
@@ -365,7 +367,7 @@ namespace Afrimine.Services.BL.Implementation
             return ApiResponse<AdminListingCountsDto>.Ok(new AdminListingCountsDto
             {
                 All = totalListings + totalAssets,
-                Pending = await _admin.CountListingsByStatusAsync(ListingStatus.PendingReview),
+                Pending = await CountPendingListingsAsync(),
                 Approved = await _admin.CountListingsByStatusAsync(ListingStatus.Active),
                 Rejected = await _admin.CountListingsByStatusAsync(ListingStatus.Rejected),
                 Flagged = await _admin.CountListingsByStatusAsync(ListingStatus.Flagged),
@@ -527,33 +529,62 @@ namespace Afrimine.Services.BL.Implementation
         // ── Revenue ───────────────────────────────────────────────────────────
         public async Task<ApiResponse<AdminRevenueSummaryDto>> GetRevenueSummaryAsync()
         {
-            var orderRevenue = await _admin.GetTotalRevenueAsync();
-            var lastMonth = await _admin.GetTotalRevenueLastMonthAsync();
-            var payouts = await _admin.GetVendorPayoutsAsync();
-            var payoutsLastMonth = await _admin.GetVendorPayoutsLastMonthAsync();
-            var orderPending = await _admin.GetPendingPaymentsAsync();
+            var now = DateTime.UtcNow;
+            var thisMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var lastMonthStart = thisMonthStart.AddMonths(-1);
+            var nextMonthStart = thisMonthStart.AddMonths(1);
 
-            // Order/Escrow/Revenue tables are currently unused — Booking/WalletTransaction/
-            // SupplierWallet carry the real numbers, same split as GetOrderSummaryAsync.
-            var bookingRevenue = await _equipment.SumBookingRevenueAsync();
-            var bookingPending = await _equipment.SumSupplierWalletPendingBalanceAsync();
+            // Revenue = money buyers paid in (legacy marketplace orders + PayScrow-paid bookings).
+            var totalRevenue = await _admin.GetTotalRevenueAsync() + await _equipment.SumBookingRevenueAsync();
+            var revenueThisMonth = await _admin.GetTotalRevenueBetweenAsync(thisMonthStart, nextMonthStart)
+                + await _equipment.SumBookingRevenueAsync(thisMonthStart, nextMonthStart);
+            var revenueLastMonth = await _admin.GetTotalRevenueBetweenAsync(lastMonthStart, thisMonthStart)
+                + await _equipment.SumBookingRevenueAsync(lastMonthStart, thisMonthStart);
 
-            var totalRevenue = orderRevenue + bookingRevenue;
-            var pendingPayments = orderPending + bookingPending;
+            // Platform's own cut (15% of each paid booking).
+            var platformFees = await _equipment.SumBookingPlatformFeesAsync(null, null);
+            var feesThisMonth = await _equipment.SumBookingPlatformFeesAsync(thisMonthStart, nextMonthStart);
+            var feesLastMonth = await _equipment.SumBookingPlatformFeesAsync(lastMonthStart, thisMonthStart);
+
+            // Vendor payouts = funds released from escrow to vendors (milestone releases).
+            // Withdrawals are drawn from this released balance, so they are not added again.
+            var payouts = await _equipment.SumReleasedMilestonesAsync(null, null);
+            var payoutsThisMonth = await _equipment.SumReleasedMilestonesAsync(thisMonthStart, nextMonthStart);
+            var payoutsLastMonth = await _equipment.SumReleasedMilestonesAsync(lastMonthStart, thisMonthStart);
+
+            // Pending = paid in but not yet released (still in escrow).
+            var pendingPayments = await _admin.GetPendingPaymentsAsync() + await _equipment.SumBookingsHeldInEscrowAsync();
+            // Net change in escrow this month = supplier share paid in this month − released this month.
+            var supplierShareThisMonth = revenueThisMonth - feesThisMonth;
+            var pendingAtMonthStart = pendingPayments - (supplierShareThisMonth - payoutsThisMonth);
 
             return ApiResponse<AdminRevenueSummaryDto>.Ok(new AdminRevenueSummaryDto
             {
                 TotalPlatformRevenue = totalRevenue,
-                TotalPlatformRevenueChangePercent = lastMonth > 0
-                    ? Math.Round((double)((totalRevenue - lastMonth) / lastMonth) * 100, 1) : null,
+                TotalPlatformRevenueChangePercent = ChangePercent(revenueThisMonth, revenueLastMonth),
+                ThisMonthRevenue = revenueThisMonth,
+                LastMonthRevenue = revenueLastMonth,
                 VendorPayouts = payouts,
-                VendorPayoutsChangePercent = payoutsLastMonth > 0
-                    ? Math.Round((double)((payouts - payoutsLastMonth) / payoutsLastMonth) * 100, 1) : null,
+                VendorPayoutsChangePercent = ChangePercent(payoutsThisMonth, payoutsLastMonth),
                 PendingPayments = pendingPayments,
-                PendingPaymentsChangePercent = null,
+                PendingPaymentsChangePercent = ChangePercent(pendingPayments, Math.Max(0, pendingAtMonthStart)),
+                PlatformFees = platformFees,
+                PlatformFeesChangePercent = ChangePercent(feesThisMonth, feesLastMonth),
                 Currency = "NGN"
             });
         }
+
+        private static double ChangePercent(decimal current, decimal previous)
+        {
+            if (previous == 0) return current == 0 ? 0 : 100;
+            return Math.Round((double)((current - previous) / previous) * 100, 1);
+        }
+
+        // Marketplace listings awaiting admin approval: explicitly submitted (PendingReview)
+        // or created with publish=true (Published) — both only go Active once an admin approves.
+        private async Task<int> CountPendingListingsAsync() =>
+            await _admin.CountListingsByStatusAsync(ListingStatus.PendingReview)
+            + await _admin.CountListingsByStatusAsync(ListingStatus.Published);
 
         public async Task<ApiResponse<PagedResultDto<AdminTransactionItemDto>>> GetTransactionsAsync(AdminTransactionQueryDto query)
         {
@@ -970,24 +1001,70 @@ namespace Afrimine.Services.BL.Implementation
 
         public async Task<ApiResponse<PagedResultDto<AdminEscrowItemDto>>> GetEscrowPaymentsAsync(AdminEscrowQueryDto query)
         {
-            var (items, total) = await _admin.GetEscrowPaymentsAsync(query.Status, query.Page, query.PageSize);
+            // Legacy marketplace escrows (Escrow table) + PayScrow escrows on equipment bookings.
+            // `status` accepts an escrow status (Pending/Funded/Released/Frozen/Refunded) or a
+            // booking payment status (e.g. InEscrow, PartiallyReleased, Disputed).
+            var (orderEscrows, _) = await _admin.GetEscrowPaymentsAsync(query.Status, 1, int.MaxValue);
+            var (bookings, _) = await _equipment.GetEscrowBookingsAdminAsync(null, null, 1, int.MaxValue);
+
+            var mappedOrders = orderEscrows.Select(e => new AdminEscrowItemDto
+            {
+                Id = e.Id.ToString(),
+                Source = "Order",
+                OrderId = e.OrderId.ToString(),
+                ListingTitle = e.Order?.Listing?.Title,
+                BuyerName = e.Order?.Buyer?.FullName,
+                VendorName = e.Order?.Vendor?.FullName,
+                Amount = e.Amount,
+                Currency = e.Currency,
+                Status = e.Status.ToString(),
+                PaymentReference = e.PaymentReference,
+                FundedAt = e.FundedAt?.ToString("O"),
+                ReleasedAt = e.ReleasedAt?.ToString("O"),
+                CreatedAt = e.CreatedAt.ToString("O"),
+                FundsFrozen = e.Status == EscrowStatus.Frozen
+            });
+
+            var hasStatus = !string.IsNullOrWhiteSpace(query.Status);
+            var isEscrowStatus = Enum.TryParse<EscrowStatus>(query.Status, true, out var escrowFilter);
+            var isPaymentStatus = Enum.TryParse<BookingPaymentStatus>(query.Status, true, out var paymentFilter);
+            if (hasStatus && !isEscrowStatus)
+                mappedOrders = Enumerable.Empty<AdminEscrowItemDto>();
+
+            var mappedBookings = bookings
+                .Where(b => !hasStatus
+                    || (isEscrowStatus && BookingPaymentStatusHelper.ToEscrowStatus(b) == escrowFilter)
+                    || (!isEscrowStatus && isPaymentStatus && b.PaymentStatus == paymentFilter))
+                .Select(b => new AdminEscrowItemDto
+                {
+                    Id = b.Id.ToString(),
+                    Source = "Booking",
+                    OrderId = b.Id.ToString(),
+                    BookingId = b.Id.ToString(),
+                    ListingTitle = b.Asset != null ? $"{b.Asset.Brand} {b.Asset.Model}" : null,
+                    BuyerName = b.Miner?.FullName,
+                    VendorName = b.Supplier?.CompanyName,
+                    Amount = b.AmountPaid ?? b.TotalAmount,
+                    Currency = b.Currency ?? "NGN",
+                    Status = BookingPaymentStatusHelper.ToEscrowStatus(b).ToString(),
+                    PaymentStatus = b.PaymentStatus.ToString(),
+                    FundsFrozen = b.FundsFrozen,
+                    PaymentReference = b.PayscrowTransactionNumber ?? b.PayscrowTransactionReference,
+                    FundedAt = b.PaidAt?.ToString("O"),
+                    ReleasedAt = b.PaymentStatus == BookingPaymentStatus.Released
+                        ? (b.Milestone3ReleasedAt ?? b.PaymentStatusUpdatedAt)?.ToString("O")
+                        : null,
+                    CreatedAt = b.CreatedAt.ToString("O")
+                });
+
+            var merged = mappedOrders.Concat(mappedBookings)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList();
+
             return ApiResponse<PagedResultDto<AdminEscrowItemDto>>.Ok(new PagedResultDto<AdminEscrowItemDto>
             {
-                Items = items.Select(e => new AdminEscrowItemDto
-                {
-                    Id = e.Id.ToString(),
-                    OrderId = e.OrderId.ToString(),
-                    BuyerName = e.Order?.Buyer?.FullName,
-                    VendorName = e.Order?.Vendor?.FullName,
-                    Amount = e.Amount,
-                    Currency = e.Currency,
-                    Status = e.Status.ToString(),
-                    PaymentReference = e.PaymentReference,
-                    FundedAt = e.FundedAt?.ToString("O"),
-                    ReleasedAt = e.ReleasedAt?.ToString("O"),
-                    CreatedAt = e.CreatedAt.ToString("O")
-                }),
-                TotalCount = total,
+                Items = merged.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToList(),
+                TotalCount = merged.Count,
                 Page = query.Page,
                 PageSize = query.PageSize
             });

@@ -149,6 +149,9 @@ namespace Afrimine.Migrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("AmountPaid")
+                        .HasColumnType("numeric");
+
                     b.Property<Guid>("AssetId")
                         .HasColumnType("uuid");
 
@@ -234,11 +237,20 @@ namespace Afrimine.Migrations.Migrations
                     b.Property<decimal>("MobilizationFee")
                         .HasColumnType("numeric");
 
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("ParInsuranceActive")
                         .HasColumnType("boolean");
 
                     b.Property<string>("ParInsurancePolicyNumber")
                         .HasColumnType("text");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PaymentStatusUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PayscrowPaymentLink")
                         .HasColumnType("text");
@@ -345,6 +357,12 @@ namespace Afrimine.Migrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Resolution")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ResolvedById")
                         .HasColumnType("text");
 
                     b.Property<int>("Status")
@@ -2149,35 +2167,35 @@ namespace Afrimine.Migrations.Migrations
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b526",
-                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
+                            ConcurrencyStamp = "11/26/2026 3:50:49 AM",
                             Name = "Vendor",
                             NormalizedName = "VENDOR"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b527",
-                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
+                            ConcurrencyStamp = "11/26/2026 3:50:49 AM",
                             Name = "Buyer",
                             NormalizedName = "BUYER"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b528",
-                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
+                            ConcurrencyStamp = "11/26/2026 3:50:49 AM",
                             Name = "Support",
                             NormalizedName = "SUPPORT"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b529",
-                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
+                            ConcurrencyStamp = "11/26/2026 3:50:49 AM",
                             Name = "SuperAdmin",
                             NormalizedName = "SUPERADMIN"
                         },
                         new
                         {
                             Id = "feaf882e-49d1-4047-b8d6-79bb1217b530",
-                            ConcurrencyStamp = "11/1/2026 5:22:03 PM",
+                            ConcurrencyStamp = "11/26/2026 3:50:49 AM",
                             Name = "Investor",
                             NormalizedName = "INVESTOR"
                         });

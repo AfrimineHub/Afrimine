@@ -709,6 +709,37 @@ namespace Afrimine.Api.Controllers.V1
             return StatusCode(response.StatusCode, response);
         }
 
+        /// <summary>Get the payment status of a booking (Buyer or Vendor)</summary>
+        /// <remarks>
+        /// Use this on the PayScrow return page (and to poll after payment) to decide which screen to show.
+        /// If we have not yet received PayScrow's webhook, the status is refreshed from PayScrow directly.
+        ///
+        /// **paymentStatus values:**
+        /// - `AwaitingPayment` — buyer has not paid; `paymentLink` is returned so they can retry
+        /// - `InEscrow` — paid, funds held in escrow
+        /// - `PartiallyReleased` — some milestones released to the supplier
+        /// - `Released` — all milestones released
+        /// - `Disputed` — dispute open, funds frozen
+        /// - `RefundPending` — dispute resolved for the buyer, refund in progress
+        /// - `Refunded` — buyer refunded
+        /// - `Failed` — PayScrow transaction failed or was terminated
+        ///
+        /// `paymentMessage` is a ready-to-display sentence for the current status.
+        /// </remarks>
+        [Authorize(Roles = Roles.VendorAndBuyer)]
+        [HttpGet("bookings/{bookingId:guid}/payment-status")]
+        [ProducesResponseType(typeof(ApiResponse<BookingPaymentStatusDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetBookingPaymentStatus(Guid bookingId)
+        {
+            var userId = HttpContext.User.GetLoggedInUserId();
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+            var response = await _service.Equipment.GetBookingPaymentStatusAsync(userId, bookingId);
+            return StatusCode(response.StatusCode, response);
+        }
+
         /// <summary>Approve a booking request (Vendor only)</summary>
         /// <remarks>
         /// Supplier accepts the miner's rental request.

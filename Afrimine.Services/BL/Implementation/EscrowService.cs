@@ -275,7 +275,7 @@ namespace Afrimine.Services.BL.Implementation
                 Reason = d.Description,
                 Status = d.Status.ToString(),
                 AdminNote = d.Resolution,
-                ResolvedAt = null,
+                ResolvedAt = d.ResolvedAt,
                 CreatedAt = d.CreatedAt,
                 Amount = d.Booking?.TotalAmount ?? 0,
                 Currency = d.Booking?.Currency ?? "NGN",
@@ -330,7 +330,7 @@ namespace Afrimine.Services.BL.Implementation
                     Reason = bd.Description,
                     Status = bd.Status.ToString(),
                     AdminNote = bd.Resolution,
-                    ResolvedAt = null,
+                    ResolvedAt = bd.ResolvedAt,
                     CreatedAt = bd.CreatedAt,
                     Amount = bd.Booking?.TotalAmount ?? 0,
                     Currency = bd.Booking?.Currency ?? "NGN"

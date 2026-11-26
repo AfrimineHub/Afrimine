@@ -13,5 +13,7 @@ namespace Afrimine.Model.Entities
         public DisputeStatus Status { get; set; } = DisputeStatus.Open;
         public string? Resolution { get; set; }
         public string? PayscrowDisputeRef { get; set; }
+        public string? ResolvedById { get; set; }
+        public DateTime? ResolvedAt { get; set; }
     }
 }

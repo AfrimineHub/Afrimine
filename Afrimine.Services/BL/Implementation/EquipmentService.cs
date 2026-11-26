@@ -556,6 +556,11 @@ namespace Afrimine.Services.BL.Implementation
             if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<BookingStatus>(status, true, out var s))
                 statusEnum = s;
 
+            // Pick up payments whose webhook never reached us (as buyer or as supplier).
+            await SyncAwaitingBookingsAsync(null, userId);
+            if (Guid.TryParse(userId, out var asSupplier))
+                await SyncAwaitingBookingsAsync(asSupplier, null);
+
             var bookings = await _equipment.GetBookingsAsync(userId, statusEnum);
             return ApiResponse<IEnumerable<BookingResponseDto>>.Ok(bookings.Select(MapToBookingDto));
         }
@@ -567,6 +572,9 @@ namespace Afrimine.Services.BL.Implementation
             if (booking is null) return ApiResponse<BookingDetailDto>.Fail("Booking not found.", 404);
             if (booking.MinerId != userId && booking.SupplierId != supplierId)
                 return ApiResponse<BookingDetailDto>.Fail("Access denied.", 403);
+
+            if (await SyncPaymentStatusFromPayscrowAsync(booking))
+                await _repository.SaveAsync();
 
             return ApiResponse<BookingDetailDto>.Ok(MapToBookingDetailDto(booking));
         }
@@ -844,6 +852,12 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             booking.FundsFrozen = true;
             booking.FundsFrozenAt = DateTime.UtcNow;
             booking.FundsFrozenReason = "Dispute opened";
+            if (BookingPaymentStatusHelper.IsPaid(booking.PaymentStatus)
+                && booking.PaymentStatus is not (BookingPaymentStatus.Refunded or BookingPaymentStatus.RefundPending))
+            {
+                booking.PaymentStatus = BookingPaymentStatus.Disputed;
+                booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
+            }
             _equipment.UpdateBooking(booking);
 
             await _equipment.AddDisputeAsync(dispute);
@@ -867,8 +881,7 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
         // ── Wallet ────────────────────────────────────────────────────────────
         public async Task<ApiResponse<WalletBalanceDto>> GetWalletBalanceAsync(Guid supplierId)
         {
-            var wallet = await _equipment.GetWalletAsync(supplierId);
-            if (wallet is null) return ApiResponse<WalletBalanceDto>.Fail("Wallet not found.", 404);
+            var wallet = await GetReconciledWalletAsync(supplierId);
 
             return ApiResponse<WalletBalanceDto>.Ok(new WalletBalanceDto
             {
@@ -937,7 +950,7 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
         {
             var totalMachines = await _equipment.CountAssetsAsync(supplierId);
             var activeLeases = await _equipment.CountActiveBookingsAsync(supplierId);
-            var wallet = await _equipment.GetWalletAsync(supplierId);
+            var wallet = await GetReconciledWalletAsync(supplierId);
 
             return ApiResponse<SupplierDashboardStatsDto>.Ok(new SupplierDashboardStatsDto
             {
@@ -984,36 +997,195 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
         // ── Webhook handler ───────────────────────────────────────────────────
         public async Task HandlePayscrowWebhookAsync(PayscrowWebhookPayload payload)
         {
-            var booking = await _equipment.GetBookingByPayscrowRefAsync(payload.ExternalReference);
+            Booking? booking = null;
+            if (!string.IsNullOrWhiteSpace(payload.ExternalReference))
+                booking = await _equipment.GetBookingByPayscrowRefAsync(payload.ExternalReference);
+            if (booking is null && !string.IsNullOrWhiteSpace(payload.TransactionNumber))
+                booking = await _equipment.GetBookingByPayscrowTransactionNumberAsync(payload.TransactionNumber);
             if (booking is null) return;
 
-            if (payload.PaymentStatus == "Paid" && payload.EscrowStatus == "InEscrow")
-            {
+            var paymentStatus = BookingPaymentStatusHelper.Normalize(payload.PaymentStatus);
+            var escrowStatus = BookingPaymentStatusHelper.Normalize(payload.EscrowStatus);
+            var status = BookingPaymentStatusHelper.Normalize(payload.Status);
+
+            if (!string.IsNullOrWhiteSpace(payload.TransactionId))
                 booking.PayscrowTransactionId = payload.TransactionId;
-                booking.PayscrowStatus = PayscrowTransactionStatus.InProgress;
-                booking.Status = BookingStatus.Active;
-                booking.UpdatedAt = DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(booking.PayscrowTransactionNumber) && !string.IsNullOrWhiteSpace(payload.TransactionNumber))
+                booking.PayscrowTransactionNumber = payload.TransactionNumber;
 
-                // Add to supplier pending wallet balance
-                var wallet = await _equipment.GetWalletAsync(booking.SupplierId);
-                if (wallet is not null)
-                {
-                    wallet.PendingBalance += booking.SupplierPayout;
-                    _equipment.UpdateWallet(wallet);
-                    await _equipment.AddWalletTransactionAsync(new WalletTransaction
-                    {
-                        WalletId = wallet.Id,
-                        Type = "credit",
-                        Amount = booking.SupplierPayout,
-                        Description = $"Escrow locked for booking {booking.Id}",
-                        Reference = payload.TransactionNumber,
-                        Currency = booking.Currency ?? "NGN"
-                    });
-                }
+            decimal? amountPaid = decimal.TryParse(payload.AmountPaid, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var amt) ? amt : null;
 
-                _equipment.UpdateBooking(booking);
-                await _repository.SaveAsync();
+            var changed = true;
+            if (escrowStatus is "indispute" or "disputed")
+            {
+                await ApplyPaymentConfirmedAsync(booking, amountPaid, payload.TransactionNumber);
+                booking.PaymentStatus = BookingPaymentStatus.Disputed;
+                booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
             }
+            else if (escrowStatus is "refunded" || paymentStatus is "refunded")
+            {
+                booking.PaymentStatus = BookingPaymentStatus.Refunded;
+                booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
+            }
+            else if (paymentStatus is "paid" or "successful" or "success" or "completed" || escrowStatus is "inescrow")
+            {
+                await ApplyPaymentConfirmedAsync(booking, amountPaid, payload.TransactionNumber);
+            }
+            else if (paymentStatus is "failed" or "cancelled" or "canceled" or "expired"
+                     || status is "terminated" or "cancelled" or "canceled" or "failed")
+            {
+                if (!BookingPaymentStatusHelper.IsPaid(booking.PaymentStatus))
+                {
+                    booking.PaymentStatus = BookingPaymentStatus.Failed;
+                    booking.PayscrowStatus = PayscrowTransactionStatus.Terminated;
+                    booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
+                }
+            }
+            else changed = false;
+
+            if (!changed && string.IsNullOrWhiteSpace(payload.TransactionId)) return;
+
+            booking.UpdatedAt = DateTime.UtcNow;
+            _equipment.UpdateBooking(booking);
+            await _repository.SaveAsync();
+        }
+
+        public async Task<ApiResponse<BookingPaymentStatusDto>> GetBookingPaymentStatusAsync(string userId, Guid bookingId)
+        {
+            var booking = await _equipment.GetBookingDetailAsync(bookingId);
+            if (booking is null) return ApiResponse<BookingPaymentStatusDto>.Fail("Booking not found.", 404);
+            if (booking.MinerId != userId && booking.SupplierId.ToString() != userId)
+                return ApiResponse<BookingPaymentStatusDto>.Fail("Access denied.", 403);
+
+            if (await SyncPaymentStatusFromPayscrowAsync(booking))
+                await _repository.SaveAsync();
+
+            return ApiResponse<BookingPaymentStatusDto>.Ok(new BookingPaymentStatusDto
+            {
+                BookingId = booking.Id,
+                PaymentStatus = booking.PaymentStatus.ToString(),
+                PaymentMessage = BookingPaymentStatusHelper.Message(booking.PaymentStatus),
+                IsPaid = BookingPaymentStatusHelper.IsPaid(booking.PaymentStatus),
+                BookingStatus = booking.Status.ToString(),
+                PayscrowStatus = booking.PayscrowStatus.ToString(),
+                PayscrowTransactionNumber = booking.PayscrowTransactionNumber,
+                PaymentLink = booking.PaymentStatus == BookingPaymentStatus.AwaitingPayment ? booking.PayscrowPaymentLink : null,
+                TotalAmount = booking.TotalAmount,
+                AmountPaid = booking.AmountPaid,
+                PaidAt = booking.PaidAt,
+                FundsFrozen = booking.FundsFrozen,
+                Currency = booking.Currency ?? "NGN",
+                UpdatedAt = booking.PaymentStatusUpdatedAt
+            });
+        }
+
+        /// <summary>
+        /// Marks a booking as paid (in escrow) and credits the supplier's pending balance.
+        /// Idempotent: PayScrow retries webhooks, and the status sync can race the webhook.
+        /// </summary>
+        private async Task ApplyPaymentConfirmedAsync(Booking booking, decimal? amountPaid, string? reference)
+        {
+            if (BookingPaymentStatusHelper.IsPaid(booking.PaymentStatus)) return;
+
+            booking.PaymentStatus = BookingPaymentStatus.InEscrow;
+            booking.PayscrowStatus = PayscrowTransactionStatus.InProgress;
+            booking.PaidAt = DateTime.UtcNow;
+            booking.AmountPaid = amountPaid ?? booking.TotalAmount;
+            booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
+            if (booking.Status is BookingStatus.Pending or BookingStatus.Approved)
+                booking.Status = BookingStatus.Active;
+            booking.UpdatedAt = DateTime.UtcNow;
+            _equipment.UpdateBooking(booking);
+
+            var wallet = await GetOrCreateWalletAsync(booking.SupplierId, booking.Currency);
+            wallet.PendingBalance += booking.SupplierPayout;
+            _equipment.UpdateWallet(wallet);
+            await _equipment.AddWalletTransactionAsync(new WalletTransaction
+            {
+                WalletId = wallet.Id,
+                BookingId = booking.Id,
+                Type = "credit",
+                Amount = booking.SupplierPayout,
+                Description = $"Escrow locked for booking {booking.Id}",
+                Reference = reference ?? booking.PayscrowTransactionNumber,
+                Currency = booking.Currency ?? "NGN"
+            });
+        }
+
+        /// <summary>
+        /// Fallback for missed webhooks: asks PayScrow for the transaction status of a booking
+        /// that we still think is unpaid. Returns true when the booking changed (caller saves).
+        /// </summary>
+        private async Task<bool> SyncPaymentStatusFromPayscrowAsync(Booking booking)
+        {
+            if (booking.PaymentStatus != BookingPaymentStatus.AwaitingPayment
+                || string.IsNullOrWhiteSpace(booking.PayscrowTransactionNumber))
+                return false;
+
+            var result = await _payscrow.GetTransactionStatusAsync(booking.PayscrowTransactionNumber);
+            if (!result.Success) return false;
+
+            var status = BookingPaymentStatusHelper.Normalize(result.Status);
+            if (result.InEscrow || result.InDispute || status is "inprogress" or "completed" or "finalized" or "paid")
+            {
+                await ApplyPaymentConfirmedAsync(booking, null, booking.PayscrowTransactionNumber);
+                if (result.InDispute)
+                {
+                    booking.PaymentStatus = BookingPaymentStatus.Disputed;
+                    booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
+                }
+                return true;
+            }
+
+            if (status is "terminated" or "cancelled" or "canceled" or "failed" or "expired")
+            {
+                booking.PaymentStatus = BookingPaymentStatus.Failed;
+                booking.PayscrowStatus = PayscrowTransactionStatus.Terminated;
+                booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
+                _equipment.UpdateBooking(booking);
+                return true;
+            }
+
+            return false;
+        }
+
+        private async Task SyncAwaitingBookingsAsync(Guid? supplierId, string? minerId)
+        {
+            var awaiting = await _equipment.GetBookingsAwaitingPaymentAsync(supplierId, minerId, 10);
+            var changed = false;
+            foreach (var b in awaiting)
+                changed |= await SyncPaymentStatusFromPayscrowAsync(b);
+            if (changed) await _repository.SaveAsync();
+        }
+
+        private async Task<SupplierWallet> GetOrCreateWalletAsync(Guid supplierId, string? currency = null)
+        {
+            var wallet = await _equipment.GetWalletAsync(supplierId);
+            if (wallet is not null) return wallet;
+
+            wallet = new SupplierWallet { SupplierId = supplierId, Currency = currency ?? "NGN" };
+            await _equipment.CreateWalletAsync(wallet);
+            return wallet;
+        }
+
+        /// <summary>
+        /// Pending balance is derived from bookings (unreleased milestones of paid bookings),
+        /// so it stays correct even when a webhook was missed or arrived twice.
+        /// </summary>
+        private async Task<SupplierWallet> GetReconciledWalletAsync(Guid supplierId)
+        {
+            await SyncAwaitingBookingsAsync(supplierId, null);
+
+            var wallet = await GetOrCreateWalletAsync(supplierId);
+            var pending = await _equipment.ComputeSupplierPendingBalanceAsync(supplierId);
+            if (wallet.PendingBalance != pending)
+            {
+                wallet.PendingBalance = pending;
+                _equipment.UpdateWallet(wallet);
+            }
+            await _repository.SaveAsync();
+            return wallet;
         }
 
         public async Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly, int page, int pageSize)
@@ -1123,6 +1295,7 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             await _equipment.AddWalletTransactionAsync(new WalletTransaction
             {
                 WalletId = wallet.Id,
+                BookingId = booking.Id,
                 Type = "credit",
                 Amount = amount,
                 Description = $"Milestone {milestoneNumber} released for booking {booking.Id}",
@@ -1145,6 +1318,10 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
                     booking.Milestone3ReleasedAt = DateTime.UtcNow;
                     break;
             }
+
+            if (booking.PaymentStatus is BookingPaymentStatus.InEscrow
+                or BookingPaymentStatus.PartiallyReleased or BookingPaymentStatus.Released)
+                BookingPaymentStatusHelper.SetFromMilestones(booking);
         }
 
         private static SupplierProfileResponseDto MapToSupplierProfileDto(SupplierProfile p) => new()
@@ -1245,7 +1422,13 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             PayscrowTransactionNumber = b.PayscrowTransactionNumber,
             SiteAddress = b.SiteAddress,
             Currency = b.Currency ?? "NGN",
-            CreatedAt = b.CreatedAt
+            CreatedAt = b.CreatedAt,
+            PaymentStatus = b.PaymentStatus.ToString(),
+            PaymentMessage = BookingPaymentStatusHelper.Message(b.PaymentStatus),
+            IsPaid = BookingPaymentStatusHelper.IsPaid(b.PaymentStatus),
+            AmountPaid = b.AmountPaid,
+            PaidAt = b.PaidAt,
+            FundsFrozen = b.FundsFrozen
         };
 
         private static BookingDetailDto MapToBookingDetailDto(Booking b)
@@ -1271,6 +1454,12 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
                 SiteAddress = b.SiteAddress,
                 Currency = b.Currency ?? "NGN",
                 CreatedAt = b.CreatedAt,
+                PaymentStatus = b.PaymentStatus.ToString(),
+                PaymentMessage = BookingPaymentStatusHelper.Message(b.PaymentStatus),
+                IsPaid = BookingPaymentStatusHelper.IsPaid(b.PaymentStatus),
+                AmountPaid = b.AmountPaid,
+                PaidAt = b.PaidAt,
+                FundsFrozen = b.FundsFrozen,
                 LogisticsStatus = b.LogisticsStatus.ToString(),
                 GitInsuranceActive = b.GitInsuranceActive,
                 InsurancePolicyNumber = b.InsurancePolicyNumber,
@@ -1324,6 +1513,16 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             booking.FundsFrozen = false;
             booking.FundsFrozenAt = null;
             booking.FundsFrozenReason = null;
+            if (booking.PaymentStatus == BookingPaymentStatus.RefundPending)
+            {
+                // Admin processed the buyer refund on PayScrow, then released the hold.
+                booking.PaymentStatus = BookingPaymentStatus.Refunded;
+                booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
+            }
+            else if (booking.PaymentStatus == BookingPaymentStatus.Disputed)
+            {
+                BookingPaymentStatusHelper.SetFromMilestones(booking);
+            }
             _equipment.UpdateBooking(booking);
             await _repository.SaveAsync();
             return ApiResponse<string>.Ok("Funds released. The vendor can withdraw them again.");
@@ -1342,6 +1541,9 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
 
             dispute.Status = favorVendor ? DisputeStatus.ResolvedVendor : DisputeStatus.ResolvedBuyer;
             dispute.Resolution = adminNote;
+            dispute.ResolvedById = adminId;
+            dispute.ResolvedAt = DateTime.UtcNow;
+            dispute.UpdatedAt = DateTime.UtcNow;
             _equipment.UpdateBookingDispute(dispute);
 
             var booking = dispute.Booking;
@@ -1350,6 +1552,14 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
                 booking.FundsFrozen = false;
                 booking.FundsFrozenAt = null;
                 booking.FundsFrozenReason = null;
+                if (BookingPaymentStatusHelper.IsPaid(booking.PaymentStatus))
+                    BookingPaymentStatusHelper.SetFromMilestones(booking);
+                _equipment.UpdateBooking(booking);
+            }
+            else if (BookingPaymentStatusHelper.IsPaid(booking.PaymentStatus))
+            {
+                booking.PaymentStatus = BookingPaymentStatus.RefundPending;
+                booking.PaymentStatusUpdatedAt = DateTime.UtcNow;
                 _equipment.UpdateBooking(booking);
             }
             await _repository.SaveAsync();
@@ -1379,6 +1589,7 @@ Guid supplierId, Guid bookingId, DailyCheckDto request)
             Description = d.Description,
             Status = d.Status.ToString(),
             Resolution = d.Resolution,
+            ResolvedAt = d.ResolvedAt,
             CreatedAt = d.CreatedAt
         };
 
