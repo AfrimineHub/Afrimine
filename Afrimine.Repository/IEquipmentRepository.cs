@@ -57,6 +57,14 @@ namespace Afrimine.Repository
         Task<Booking?> GetBookingByIdAdminAsync(Guid bookingId);
         Task<(IEnumerable<Asset> Items, int TotalCount)> GetAllAssetsAdminAsync(string? q, AssetStatus? status, int page, int pageSize);
         Task<decimal> SumBookingRevenueAsync();
+        Task<decimal> SumBookingRevenueAsync(DateTime? from, DateTime? to);
+        Task<decimal> SumBookingPlatformFeesAsync(DateTime? from, DateTime? to);
+        Task<decimal> SumReleasedMilestonesAsync(DateTime? from, DateTime? to);
+        Task<decimal> SumBookingsHeldInEscrowAsync();
+        Task<decimal> ComputeSupplierPendingBalanceAsync(Guid supplierId);
+        Task<Booking?> GetBookingByPayscrowTransactionNumberAsync(string transactionNumber);
+        Task<IEnumerable<Booking>> GetBookingsAwaitingPaymentAsync(Guid? supplierId, string? minerId, int take);
+        Task<(IEnumerable<Booking> Items, int TotalCount)> GetEscrowBookingsAdminAsync(IReadOnlyCollection<BookingPaymentStatus>? paymentStatuses, bool? frozen, int page, int pageSize);
         Task<decimal> SumWalletTransactionCreditsAsync();
         Task<decimal> SumSupplierWalletPendingBalanceAsync();
         Task<(IEnumerable<WalletTransaction> Items, int TotalCount)> GetWalletTransactionsAdminAsync(int page, int pageSize);

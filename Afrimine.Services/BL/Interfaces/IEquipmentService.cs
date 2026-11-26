@@ -74,6 +74,7 @@ namespace Afrimine.Services.BL.Interfaces
 
         // Webhook handler
         Task HandlePayscrowWebhookAsync(PayscrowWebhookPayload payload);
+        Task<ApiResponse<BookingPaymentStatusDto>> GetBookingPaymentStatusAsync(string userId, Guid bookingId);
         Task<ApiResponse<PagedResultDto<AssetResponseDto>>> SearchAssetsAsync(string? q, MachineType? machineType, string? location, decimal? maxDailyRate, bool availableOnly, int page, int pageSize);
         // Admin — milestones
         Task<ApiResponse<PagedResultDto<AdminMilestoneItemDto>>> GetAllMilestonesAsync(AdminMilestoneQueryDto query);

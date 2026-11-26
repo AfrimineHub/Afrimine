@@ -282,6 +282,32 @@ namespace Afrimine.Services.DTOs
             public string? SiteAddress { get; set; }
             public string Currency { get; set; } = "NGN";
             public DateTime CreatedAt { get; set; }
+
+            // Payment state — drives which screen/message the frontend shows
+            public string PaymentStatus { get; set; } = string.Empty;
+            public string PaymentMessage { get; set; } = string.Empty;
+            public bool IsPaid { get; set; }
+            public decimal? AmountPaid { get; set; }
+            public DateTime? PaidAt { get; set; }
+            public bool FundsFrozen { get; set; }
+        }
+
+        public class BookingPaymentStatusDto
+        {
+            public Guid BookingId { get; set; }
+            public string PaymentStatus { get; set; } = string.Empty;
+            public string PaymentMessage { get; set; } = string.Empty;
+            public bool IsPaid { get; set; }
+            public string BookingStatus { get; set; } = string.Empty;
+            public string PayscrowStatus { get; set; } = string.Empty;
+            public string? PayscrowTransactionNumber { get; set; }
+            public string? PaymentLink { get; set; }
+            public decimal TotalAmount { get; set; }
+            public decimal? AmountPaid { get; set; }
+            public DateTime? PaidAt { get; set; }
+            public bool FundsFrozen { get; set; }
+            public string Currency { get; set; } = "NGN";
+            public DateTime? UpdatedAt { get; set; }
         }
 
         public class BookingDetailDto : BookingResponseDto
@@ -372,6 +398,7 @@ namespace Afrimine.Services.DTOs
             public string Description { get; set; } = string.Empty;
             public string Status { get; set; } = string.Empty;
             public string? Resolution { get; set; }
+            public DateTime? ResolvedAt { get; set; }
             public DateTime CreatedAt { get; set; }
         }
 

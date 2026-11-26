@@ -286,20 +286,103 @@ namespace Afrimine.Repository
             return (items, total);
         }
 
-        public async Task<decimal> SumBookingRevenueAsync()
+        // Payment states where the buyer's money actually reached PayScrow and was not refunded.
+        private static readonly BookingPaymentStatus[] PaidStatuses =
         {
-            // Only count TotalAmount for bookings where a real payment credit actually
-            // happened (escrow-locked or milestone-released) — Pending/Declined bookings
-            // never had money move, so they shouldn't count as "revenue".
-            var paidBookingIds = await _context.Set<WalletTransaction>()
-                .Where(t => t.BookingId != null && t.Type == "credit" && !t.IsDeleted)
-                .Select(t => t.BookingId!.Value)
-                .Distinct()
-                .ToListAsync();
+            BookingPaymentStatus.InEscrow,
+            BookingPaymentStatus.PartiallyReleased,
+            BookingPaymentStatus.Released,
+            BookingPaymentStatus.Disputed
+        };
 
+        private IQueryable<Booking> PaidBookings(DateTime? from, DateTime? to)
+        {
+            var query = _context.Set<Booking>()
+                .Where(b => !b.IsDeleted && PaidStatuses.Contains(b.PaymentStatus));
+            if (from.HasValue) query = query.Where(b => (b.PaidAt ?? b.CreatedAt) >= from.Value);
+            if (to.HasValue) query = query.Where(b => (b.PaidAt ?? b.CreatedAt) < to.Value);
+            return query;
+        }
+
+        public Task<decimal> SumBookingRevenueAsync() => SumBookingRevenueAsync(null, null);
+
+        public async Task<decimal> SumBookingRevenueAsync(DateTime? from, DateTime? to) =>
+            await PaidBookings(from, to).SumAsync(b => b.TotalAmount);
+
+        public async Task<decimal> SumBookingPlatformFeesAsync(DateTime? from, DateTime? to) =>
+            await PaidBookings(from, to).SumAsync(b => b.PlatformFee);
+
+        public async Task<decimal> SumReleasedMilestonesAsync(DateTime? from, DateTime? to)
+        {
+            var lo = from ?? DateTime.MinValue;
+            var hi = to ?? DateTime.MaxValue;
             return await _context.Set<Booking>()
-                .Where(b => paidBookingIds.Contains(b.Id))
-                .SumAsync(b => b.TotalAmount);
+                .Where(b => !b.IsDeleted)
+                .Select(b =>
+                    (b.Milestone1Status == MilestoneStatus.Released && (b.Milestone1ReleasedAt ?? b.UpdatedAt) >= lo && (b.Milestone1ReleasedAt ?? b.UpdatedAt) < hi ? b.Milestone1Amount : 0m)
+                  + (b.Milestone2Status == MilestoneStatus.Released && (b.Milestone2ReleasedAt ?? b.UpdatedAt) >= lo && (b.Milestone2ReleasedAt ?? b.UpdatedAt) < hi ? b.Milestone2Amount : 0m)
+                  + (b.Milestone3Status == MilestoneStatus.Released && (b.Milestone3ReleasedAt ?? b.UpdatedAt) >= lo && (b.Milestone3ReleasedAt ?? b.UpdatedAt) < hi ? b.Milestone3Amount : 0m))
+                .SumAsync();
+        }
+
+        // Money paid in but not yet released to a supplier: unreleased milestones of paid
+        // bookings, plus bookings awaiting a buyer refund.
+        public async Task<decimal> SumBookingsHeldInEscrowAsync() =>
+            await _context.Set<Booking>()
+                .Where(b => !b.IsDeleted && (PaidStatuses.Contains(b.PaymentStatus) || b.PaymentStatus == BookingPaymentStatus.RefundPending))
+                .Select(b => (b.Milestone1Status != MilestoneStatus.Released ? b.Milestone1Amount : 0m)
+                           + (b.Milestone2Status != MilestoneStatus.Released ? b.Milestone2Amount : 0m)
+                           + (b.Milestone3Status != MilestoneStatus.Released ? b.Milestone3Amount : 0m))
+                .SumAsync();
+
+        public async Task<decimal> ComputeSupplierPendingBalanceAsync(Guid supplierId) =>
+            await _context.Set<Booking>()
+                .Where(b => b.SupplierId == supplierId && !b.IsDeleted
+                    && (b.PaymentStatus == BookingPaymentStatus.InEscrow
+                        || b.PaymentStatus == BookingPaymentStatus.PartiallyReleased
+                        || b.PaymentStatus == BookingPaymentStatus.Disputed))
+                .Select(b => (b.Milestone1Status != MilestoneStatus.Released ? b.Milestone1Amount : 0m)
+                           + (b.Milestone2Status != MilestoneStatus.Released ? b.Milestone2Amount : 0m)
+                           + (b.Milestone3Status != MilestoneStatus.Released ? b.Milestone3Amount : 0m))
+                .SumAsync();
+
+        public async Task<Booking?> GetBookingByPayscrowTransactionNumberAsync(string transactionNumber) =>
+            await _context.Set<Booking>()
+                .FirstOrDefaultAsync(x => x.PayscrowTransactionNumber == transactionNumber);
+
+        public async Task<IEnumerable<Booking>> GetBookingsAwaitingPaymentAsync(Guid? supplierId, string? minerId, int take)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-30);
+            var query = _context.Set<Booking>()
+                .Where(b => !b.IsDeleted
+                    && b.PaymentStatus == BookingPaymentStatus.AwaitingPayment
+                    && b.PayscrowTransactionNumber != null
+                    && b.Status != BookingStatus.Declined
+                    && b.Status != BookingStatus.Cancelled
+                    && b.CreatedAt >= cutoff);
+            if (supplierId.HasValue) query = query.Where(b => b.SupplierId == supplierId.Value);
+            if (!string.IsNullOrWhiteSpace(minerId)) query = query.Where(b => b.MinerId == minerId);
+            return await query.OrderByDescending(b => b.CreatedAt).Take(take).ToListAsync();
+        }
+
+        public async Task<(IEnumerable<Booking> Items, int TotalCount)> GetEscrowBookingsAdminAsync(
+            IReadOnlyCollection<BookingPaymentStatus>? paymentStatuses, bool? frozen, int page, int pageSize)
+        {
+            IQueryable<Booking> query = _context.Set<Booking>()
+                .Include(x => x.Asset)
+                .Include(x => x.Miner)
+                .Include(x => x.Supplier)
+                .Where(x => !x.IsDeleted && x.PayscrowTransactionNumber != null);
+
+            if (paymentStatuses is { Count: > 0 })
+                query = query.Where(x => paymentStatuses.Contains(x.PaymentStatus));
+            if (frozen.HasValue)
+                query = query.Where(x => x.FundsFrozen == frozen.Value);
+
+            var total = await query.CountAsync();
+            var items = await query.OrderByDescending(x => x.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (items, total);
         }
 
         public async Task<decimal> SumWalletTransactionCreditsAsync() =>
@@ -344,7 +427,7 @@ namespace Afrimine.Repository
                 .FirstOrDefaultAsync(x => x.Id == disputeId);
 
         public async Task<int> CountOpenBookingDisputesAsync() =>
-            await _context.Set<BookingDispute>().CountAsync(x => x.Status == DisputeStatus.Open);
+            await _context.Set<BookingDispute>().CountAsync(x => x.Status == DisputeStatus.Open || x.Status == DisputeStatus.UnderReview);
 
         public async Task<decimal> GetFrozenAmountAsync(Guid supplierId) =>
         await _context.Set<Booking>()

@@ -226,6 +226,10 @@ namespace Afrimine.Services.DTOs
         public double? VendorPayoutsChangePercent { get; set; }
         public decimal PendingPayments { get; set; }
         public double? PendingPaymentsChangePercent { get; set; }
+        public decimal PlatformFees { get; set; }
+        public double? PlatformFeesChangePercent { get; set; }
+        public decimal ThisMonthRevenue { get; set; }
+        public decimal LastMonthRevenue { get; set; }
         public string? Currency { get; set; }
     }
 

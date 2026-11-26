@@ -32,6 +32,10 @@ namespace Afrimine.Model.Entities
         public string? PayscrowPaymentLink { get; set; }
         public string? PayscrowTransactionReference { get; set; }
         public PayscrowTransactionStatus PayscrowStatus { get; set; } = PayscrowTransactionStatus.Pending;
+        public BookingPaymentStatus PaymentStatus { get; set; } = BookingPaymentStatus.AwaitingPayment;
+        public decimal? AmountPaid { get; set; }
+        public DateTime? PaidAt { get; set; }
+        public DateTime? PaymentStatusUpdatedAt { get; set; }
 
         // Logistics
         public LogisticsStatus LogisticsStatus { get; set; } = LogisticsStatus.NotStarted;
